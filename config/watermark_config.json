@@ -1,0 +1,41 @@
+{
+  "watermark_config": {
+    "default_lookback_days": 2,
+    "max_lookback_days": 7,
+    "processing_intervals": {
+      "bronze_to_silver": "15 minutes",
+      "silver_to_gold": "1 hour",
+      "metrics_calculation": "1 hour"
+    },
+    "source_tables": {
+      "system.billing.usage": {
+        "watermark_column": "usage_start_time",
+        "lookback_days": 2
+      },
+      "system.compute.clusters": {
+        "watermark_column": "change_time",
+        "lookback_days": 2
+      },
+      "system.compute.warehouses": {
+        "watermark_column": "change_time",
+        "lookback_days": 2
+      },
+      "system.lakeflow.jobs": {
+        "watermark_column": "change_time",
+        "lookback_days": 2
+      },
+      "system.lakeflow.pipelines": {
+        "watermark_column": "change_time",
+        "lookback_days": 2
+      },
+      "system.lakeflow.job_run_timeline": {
+        "watermark_column": "start_time",
+        "lookback_days": 2
+      },
+      "system.query.history": {
+        "watermark_column": "start_time",
+        "lookback_days": 2
+      }
+    }
+  }
+}

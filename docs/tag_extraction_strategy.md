@@ -1,3 +1,7 @@
+# Tag Extraction Strategy
+
+> **Navigation**: [README](../README.md) | [Architecture & Design](architecture.md) | [Database Best Practices](database_best_practices.md) | [Configuration Guide](config_folder_guide.md) | [Deployment Guide](deployment_guide.md) | [Documentation Reorganization Summary](documentation_reorganization_summary.md)
+
 # Tag Extraction and Processing Strategy
 
 ## 1) Tag Sources and Mapping

@@ -1,0 +1,55 @@
+{
+  "tag_taxonomy": {
+    "cost_allocation": {
+      "cost_center": {
+        "required": true,
+        "allowed_values": ["finance", "engineering", "marketing", "sales", "operations"],
+        "default": "unknown"
+      },
+      "business_unit": {
+        "required": true,
+        "allowed_values": ["data-platform", "analytics", "ml-platform", "infrastructure"],
+        "default": "unknown"
+      },
+      "department": {
+        "required": false,
+        "allowed_values": ["data-engineering", "data-science", "platform-engineering", "devops"],
+        "default": "unknown"
+      }
+    },
+    "operational": {
+      "environment": {
+        "required": true,
+        "allowed_values": ["dev", "staging", "prod"],
+        "default": "dev"
+      },
+      "team": {
+        "required": false,
+        "allowed_values": ["data-team", "ml-team", "platform-team", "analytics-team"],
+        "default": "unknown"
+      },
+      "project": {
+        "required": false,
+        "allowed_values": ["observability", "customer-analytics", "recommendation-engine"],
+        "default": "unknown"
+      }
+    },
+    "data_governance": {
+      "data_product": {
+        "required": false,
+        "allowed_values": ["customer-360", "product-analytics", "financial-reporting"],
+        "default": "unknown"
+      },
+      "data_classification": {
+        "required": true,
+        "allowed_values": ["public", "internal", "confidential", "restricted"],
+        "default": "internal"
+      },
+      "retention_policy": {
+        "required": false,
+        "allowed_values": ["30-days", "90-days", "1-year", "3-years", "indefinite"],
+        "default": "1-year"
+      }
+    }
+  }
+}

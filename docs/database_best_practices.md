@@ -1,3 +1,7 @@
+# Database Best Practices and Naming Standards
+
+> **Navigation**: [README](../README.md) | [Architecture & Design](architecture.md) | [Tag Extraction Strategy](tag_extraction_strategy.md) | [Configuration Guide](config_folder_guide.md) | [Deployment Guide](deployment_guide.md) | [Documentation Reorganization Summary](documentation_reorganization_summary.md)
+
 # Databricks Observability Platform — Naming Standards & Best Practices
 
 ## 1) Table Naming Standards
@@ -265,33 +269,90 @@ WHEN NOT MATCHED THEN
   VALUES ({values});
 ```
 
-### 3.3 Partitioning Standards
+### 3.3 Partitioning Standards (Standardized)
 ```sql
--- Time-based Partitioning
+-- Large tables: Time-based partitioning
 PARTITIONED BY (workspace_id, date(start_time))
 PARTITIONED BY (workspace_id, usage_date)
 PARTITIONED BY (workspace_id, run_date)
 
--- Entity-based Partitioning
-PARTITIONED BY (workspace_id, entity_type)
-PARTITIONED BY (workspace_id, workflow_type)
+-- Entity tables: Workspace-based partitioning
+PARTITIONED BY (workspace_id)
+
+-- Small tables: No partitioning
+-- (dim_user, dim_sku, dim_node_type)
 ```
 
-### 3.4 Clustering Standards
+### 3.4 Clustering Standards (Simplified)
 ```sql
--- Clustering by Business Keys
-CLUSTERED BY (entity_id) INTO 8 BUCKETS
-CLUSTERED BY (workflow_id) INTO 8 BUCKETS
-CLUSTERED BY (compute_id) INTO 8 BUCKETS
-
--- Clustering by Time
-CLUSTERED BY (start_time) INTO 8 BUCKETS
-CLUSTERED BY (usage_start_time) INTO 8 BUCKETS
+-- No clustering needed initially
+-- Can be added later for optimization if needed
+-- Focus on proper partitioning first
 ```
 
 ---
 
-## 4) Function Naming Standards
+## 4) Technology Choices and Standards
+
+### 4.1 Function Implementation
+```sql
+-- SQL UDFs (Recommended)
+-- Performance: Execute closer to data, reducing serialization overhead
+-- Simplicity: No Python dependency management in SQL context
+-- Maintainability: Version control with SQL scripts
+-- Consistency: Unified SQL ecosystem
+
+-- Example: Tag extraction function
+CREATE FUNCTION extract_tag(tags MAP<STRING, STRING>, tag_name STRING)
+RETURNS STRING
+LANGUAGE SQL
+AS $$
+  COALESCE(
+    tags[tag_name],
+    tags[UPPER(tag_name)],
+    tags[LOWER(tag_name)],
+    tags[INITCAP(tag_name)],
+    'Unknown'
+  )
+$$;
+```
+
+### 4.2 Error Handling Strategy
+```python
+# Python: Try-catch blocks for data processing logic
+try:
+    # Data processing logic
+    process_data()
+except Exception as e:
+    # Log error and trigger manual re-processing
+    log_error(e)
+    raise ProcessingError(f"Failed to process data: {e}")
+
+# SQL: Error handling through conditional logic
+CASE 
+  WHEN validation_condition THEN 'SUCCESS'
+  ELSE 'FAILED'
+END AS processing_status
+```
+
+### 4.3 Monitoring Strategy
+```sql
+-- Built-in Monitoring (Primary)
+-- Databricks Workflows: Job monitoring, retry logic, alerting
+-- Delta Lake: Data quality metrics, ACID guarantees
+-- Unity Catalog: Data lineage and governance
+-- Databricks SQL: Query performance monitoring
+
+-- Custom Monitoring (Enhancement)
+-- Business metrics for cost allocation and resource efficiency
+-- Custom data quality rules beyond built-in validation
+-- Custom alerting thresholds and notification channels
+-- Business-specific analytics dashboards
+```
+
+---
+
+## 5) Function Naming Standards
 
 ### 4.1 Data Processing Functions
 ```sql
