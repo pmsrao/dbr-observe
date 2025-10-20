@@ -16,7 +16,7 @@ COMMENT 'Databricks Observability Platform - Main catalog for all observability 
 
 -- Set catalog properties for governance
 ALTER CATALOG obs SET PROPERTIES (
-    'owner' = 'data-platform-team@company.com',
+    'owner' = 'data-platform-owner',
     'description' = 'Comprehensive observability platform for Databricks workloads, costs, and performance'
 );
 
@@ -27,12 +27,12 @@ ALTER CATALOG obs SET PROPERTIES (
 -- Bronze Layer - Raw system table data
 CREATE SCHEMA IF NOT EXISTS obs.bronze
 COMMENT 'Bronze layer - Raw system table data with minimal transformation'
-LOCATION 's3://company-databricks-obs/bronze/';
+;
 
 -- Silver Layer - Curated and unified data
 CREATE SCHEMA IF NOT EXISTS obs.silver
 COMMENT 'Silver layer - Curated data with SCD2 history tracking and harmonization'
-LOCATION 's3://company-databricks-obs/silver/';
+;
 
 -- Silver Staging - Temporary staging for harmonization (moved to silver schema)
 -- CREATE SCHEMA IF NOT EXISTS obs.silver_stg
@@ -42,17 +42,17 @@ LOCATION 's3://company-databricks-obs/silver/';
 -- Gold Layer - Analytics-ready data
 CREATE SCHEMA IF NOT EXISTS obs.gold
 COMMENT 'Gold layer - Analytics-ready dimensions and facts for business intelligence'
-LOCATION 's3://company-databricks-obs/gold/';
+;
 
 -- Meta Schema - Metadata and configuration management
 CREATE SCHEMA IF NOT EXISTS obs.meta
 COMMENT 'Meta schema - Metadata management, watermarks, lineage, and configuration'
-LOCATION 's3://company-databricks-obs/meta/';
+;
 
 -- Ops Schema - Operational monitoring and metrics
 CREATE SCHEMA IF NOT EXISTS obs.ops
 COMMENT 'Ops schema - Operational monitoring, data quality metrics, and alerting'
-LOCATION 's3://company-databricks-obs/ops/';
+;
 
 -- =============================================================================
 -- 3. SCHEMA PROPERTIES AND GOVERNANCE
@@ -60,13 +60,13 @@ LOCATION 's3://company-databricks-obs/ops/';
 
 -- Set schema properties for data governance
 ALTER SCHEMA obs.bronze SET PROPERTIES (
-    'owner' = 'data-platform-team@company.com',
+    'owner' = 'data-platform-owner',
     'retention_days' = '365',
     'data_classification' = 'internal'
 );
 
 ALTER SCHEMA obs.silver SET PROPERTIES (
-    'owner' = 'data-platform-team@company.com',
+    'owner' = 'data-platform-owner',
     'retention_days' = '730',
     'data_classification' = 'internal'
 );
@@ -78,19 +78,19 @@ ALTER SCHEMA obs.silver SET PROPERTIES (
 -- );
 
 ALTER SCHEMA obs.gold SET PROPERTIES (
-    'owner' = 'data-platform-team@company.com',
+    'owner' = 'data-platform-owner',
     'retention_days' = '1095',
     'data_classification' = 'internal'
 );
 
 ALTER SCHEMA obs.meta SET PROPERTIES (
-    'owner' = 'data-platform-team@company.com',
+    'owner' = 'data-platform-owner',
     'retention_days' = '365',
     'data_classification' = 'internal'
 );
 
 ALTER SCHEMA obs.ops SET PROPERTIES (
-    'owner' = 'data-platform-team@company.com',
+    'owner' = 'data-platform-owner',
     'retention_days' = '365',
     'data_classification' = 'internal'
 );

@@ -7,40 +7,60 @@
 -- =============================================================================
 
 -- =============================================================================
--- 1. SERVICE PRINCIPAL PERMISSIONS
+-- 1. OWNERSHIP ASSIGNMENTS
+-- =============================================================================
+
+-- Assign catalog and schema ownership to data-platform-owner
+ALTER CATALOG obs OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.bronze OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.silver OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.gold OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.meta OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.ops OWNER TO `data-platform-owner`;
+
+-- Optionally grant explicit all privileges (owner already implies full control)
+GRANT ALL PRIVILEGES ON CATALOG obs TO `data-platform-owner`;
+GRANT ALL PRIVILEGES ON SCHEMA obs.bronze TO `data-platform-owner`;
+GRANT ALL PRIVILEGES ON SCHEMA obs.silver TO `data-platform-owner`;
+GRANT ALL PRIVILEGES ON SCHEMA obs.gold TO `data-platform-owner`;
+GRANT ALL PRIVILEGES ON SCHEMA obs.meta TO `data-platform-owner`;
+GRANT ALL PRIVILEGES ON SCHEMA obs.ops TO `data-platform-owner`;
+
+-- =============================================================================
+-- 2. SERVICE PRINCIPAL PERMISSIONS
 -- =============================================================================
 
 -- Grant service principal access to system tables
 -- Note: This should be configured through Databricks admin console
--- Service Principal: observability-service-principal@company.com
+-- Service Principal: sp_madhu
 
 -- Grant catalog usage to service principal
-GRANT USE CATALOG ON CATALOG obs TO `observability-service-principal@company.com`;
+GRANT USE CATALOG ON CATALOG obs TO `sp_madhu`;
 
 -- Grant schema usage to service principal
-GRANT USE SCHEMA ON SCHEMA obs.bronze TO `observability-service-principal@company.com`;
-GRANT USE SCHEMA ON SCHEMA obs.silver TO `observability-service-principal@company.com`;
-GRANT USE SCHEMA ON SCHEMA obs.gold TO `observability-service-principal@company.com`;
-GRANT USE SCHEMA ON SCHEMA obs.meta TO `observability-service-principal@company.com`;
-GRANT USE SCHEMA ON SCHEMA obs.ops TO `observability-service-principal@company.com`;
+GRANT USE SCHEMA ON SCHEMA obs.bronze TO `sp_madhu`;
+GRANT USE SCHEMA ON SCHEMA obs.silver TO `sp_madhu`;
+GRANT USE SCHEMA ON SCHEMA obs.gold TO `sp_madhu`;
+GRANT USE SCHEMA ON SCHEMA obs.meta TO `sp_madhu`;
+GRANT USE SCHEMA ON SCHEMA obs.ops TO `sp_madhu`;
 
 -- Grant table permissions to service principal
 -- Bronze layer - Read/Write access
-GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.bronze TO `observability-service-principal@company.com`;
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.bronze TO `sp_madhu`;
 
 -- Silver layer - Read/Write access
-GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.silver TO `observability-service-principal@company.com`;
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.silver TO `sp_madhu`;
 
 -- Silver staging views are now in silver schema
 
 -- Gold layer - Read/Write access
-GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.gold TO `observability-service-principal@company.com`;
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.gold TO `sp_madhu`;
 
 -- Meta schema - Read/Write access
-GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.meta TO `observability-service-principal@company.com`;
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.meta TO `sp_madhu`;
 
 -- Ops schema - Read/Write access
-GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.ops TO `observability-service-principal@company.com`;
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA obs.ops TO `sp_madhu`;
 
 -- =============================================================================
 -- 2. PLATFORM TEAM PERMISSIONS

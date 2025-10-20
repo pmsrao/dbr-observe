@@ -2,8 +2,7 @@
   "environments": {
     "dev": {
       "catalog": "obs_dev",
-      "workspace_url": "https://dev-workspace.cloud.databricks.com",
-      "storage_location": "s3://company-databricks-obs-dev/",
+      "workspace_url": "https://dbc-2f7f5d0e-1054.cloud.databricks.com",
       "retention_days": {
         "bronze": 90,
         "silver": 180,
@@ -12,8 +11,7 @@
     },
     "staging": {
       "catalog": "obs_staging",
-      "workspace_url": "https://staging-workspace.cloud.databricks.com",
-      "storage_location": "s3://company-databricks-obs-staging/",
+      "workspace_url": "https://dbc-2f7f5d0e-1054.cloud.databricks.com",
       "retention_days": {
         "bronze": 180,
         "silver": 365,
@@ -22,8 +20,7 @@
     },
     "prod": {
       "catalog": "obs",
-      "workspace_url": "https://prod-workspace.cloud.databricks.com",
-      "storage_location": "s3://company-databricks-obs/",
+      "workspace_url": "https://dbc-2f7f5d0e-1054.cloud.databricks.com",
       "retention_days": {
         "bronze": 365,
         "silver": 730,
