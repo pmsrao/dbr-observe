@@ -1,0 +1,351 @@
+{
+  "schema": "system.lakeflow",
+  "comment": "Jobs, job tasks, job and task timelines, and Lakeflow (DLT/streaming table) pipelines.",
+  "tables": [
+    {
+      "table_name": "jobs",
+      "path": "system.lakeflow.jobs",
+      "comment": "SCD2 of job definitions across the account (regional scope).",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID the job belongs to.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "job_id",
+          "type": "string",
+          "description": "Job ID (unique within a workspace).",
+          "example": "148690321452345"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "description": "User-supplied job name.",
+          "example": "Daily Ingest"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "User-supplied description (may be empty when CMK is configured).",
+          "example": "Loads raw events to bronze"
+        },
+        {
+          "name": "creator_id",
+          "type": "string",
+          "description": "ID of the principal who created the job.",
+          "example": "2967555311742259"
+        },
+        {
+          "name": "tags",
+          "type": "map<string,string>",
+          "description": "User-supplied custom tags.",
+          "example": {
+            "env": "prod",
+            "team": "data-eng"
+          }
+        },
+        {
+          "name": "run_as",
+          "type": "string",
+          "description": "User or service principal the job runs as.",
+          "example": "sp://jobs-runner"
+        },
+        {
+          "name": "change_time",
+          "type": "timestamp",
+          "description": "Time the job definition was last modified (SCD2).",
+          "example": "2025-03-10T12:45:12Z"
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp",
+          "description": "Time the job was deleted, null if active."
+        }
+      ]
+    },
+    {
+      "table_name": "job_tasks",
+      "path": "system.lakeflow.job_tasks",
+      "comment": "SCD2 of job task definitions.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "job_id",
+          "type": "string",
+          "description": "Parent job ID.",
+          "example": "148690321452345"
+        },
+        {
+          "name": "task_key",
+          "type": "string",
+          "description": "Reference key for a task in a job (unique within job).",
+          "example": "ingest_bz"
+        },
+        {
+          "name": "depends_on_keys",
+          "type": "array<string>",
+          "description": "Task keys of upstream dependencies.",
+          "example": [
+            "validate_src"
+          ]
+        },
+        {
+          "name": "change_time",
+          "type": "timestamp",
+          "description": "Time the task definition changed (SCD2).",
+          "example": "2025-03-10T12:45:12Z"
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp",
+          "description": "Time the task was deleted, null if active."
+        }
+      ]
+    },
+    {
+      "table_name": "job_run_timeline",
+      "path": "system.lakeflow.job_run_timeline",
+      "comment": "Timeline of job runs.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "job_id",
+          "type": "string",
+          "description": "Job ID.",
+          "example": "148690321452345"
+        },
+        {
+          "name": "job_run_id",
+          "type": "string",
+          "description": "Job run ID.",
+          "example": "987654321"
+        },
+        {
+          "name": "run_type",
+          "type": "string",
+          "description": "Type of run (JOB_RUN, SUBMIT_RUN, WORKFLOW_RUN, ...).",
+          "example": "JOB_RUN"
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp",
+          "description": "Start time of the run.",
+          "example": "2025-10-01T10:00:00Z"
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "description": "End time of the run.",
+          "example": "2025-10-01T10:15:00Z"
+        },
+        {
+          "name": "result_state",
+          "type": "string",
+          "description": "Terminal result state.",
+          "example": "SUCCEEDED",
+          "notes": "Possible: SUCCEEDED, FAILED, SKIPPED, CANCELLED, TIMED_OUT, ERROR"
+        }
+      ]
+    },
+    {
+      "table_name": "job_task_run_timeline",
+      "path": "system.lakeflow.job_task_run_timeline",
+      "comment": "Timeline of task runs within jobs.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "job_id",
+          "type": "string",
+          "description": "Job ID.",
+          "example": "148690321452345"
+        },
+        {
+          "name": "job_task_run_id",
+          "type": "string",
+          "description": "Job task run ID.",
+          "example": "110373910199121"
+        },
+        {
+          "name": "task_key",
+          "type": "string",
+          "description": "Task key within job.",
+          "example": "ingest_bz"
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp",
+          "description": "Start time of the task run.",
+          "example": "2025-10-01T10:02:00Z"
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "description": "End time of the task run.",
+          "example": "2025-10-01T10:10:30Z"
+        },
+        {
+          "name": "result_state",
+          "type": "string",
+          "description": "Terminal result state.",
+          "example": "SUCCEEDED"
+        }
+      ]
+    },
+    {
+      "table_name": "pipelines",
+      "path": "system.lakeflow.pipelines",
+      "comment": "SCD2 of Lakeflow (DLT/SQL) pipelines.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "pipeline_id",
+          "type": "string",
+          "description": "Pipeline ID.",
+          "example": "e3c1b56b-7a8e-4b1a-9e88-1c2d3f4a5b6c"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "description": "Name of the pipeline.",
+          "example": "Bronze to Silver"
+        },
+        {
+          "name": "settings",
+          "type": "map",
+          "description": "Pipeline settings/flags.",
+          "example": {
+            "photon": true,
+            "serverless": true,
+            "continuous": false,
+            "edition": "ADVANCED"
+          }
+        },
+        {
+          "name": "pipeline_type",
+          "type": "string",
+          "description": "Pipeline type.",
+          "example": "ETL_PIPELINE",
+          "notes": "Possible: ETL_PIPELINE, MATERIALIZED_VIEW, STREAMING_TABLE, INGESTION_PIPELINE, INGESTION_GATEWAY"
+        },
+        {
+          "name": "change_time",
+          "type": "timestamp",
+          "description": "Time pipeline definition last changed.",
+          "example": "2025-04-05T12:00:00Z"
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp",
+          "description": "Time pipeline was deleted, null if active."
+        }
+      ]
+    },
+    {
+      "table_name": "pipeline_update_timeline",
+      "path": "system.lakeflow.pipeline_update_timeline",
+      "comment": "Timeline of pipeline updates.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "pipeline_id",
+          "type": "string",
+          "description": "Pipeline ID.",
+          "example": "e3c1b56b-7a8e-4b1a-9e88-1c2d3f4a5b6c"
+        },
+        {
+          "name": "update_id",
+          "type": "string",
+          "description": "Update/run ID for the pipeline.",
+          "example": "9a9b16c2-1c77-45e9-9b27-3f9f66d5b76b"
+        },
+        {
+          "name": "trigger_type",
+          "type": "string",
+          "description": "Update trigger (e.g., job_task).",
+          "example": "job_task"
+        },
+        {
+          "name": "update_type",
+          "type": "string",
+          "description": "Update type.",
+          "example": "API_CALL"
+        },
+        {
+          "name": "result_state",
+          "type": "string",
+          "description": "Terminal result state.",
+          "example": "COMPLETED"
+        },
+        {
+          "name": "performance_target",
+          "type": "string",
+          "description": "Performance mode for serverless updates.",
+          "example": "STANDARD"
+        }
+      ]
+    }
+  ]
+}

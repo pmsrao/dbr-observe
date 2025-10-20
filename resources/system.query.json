@@ -1,0 +1,282 @@
+{
+  "schema": "system.query",
+  "comment": "History of SQL and serverless (notebooks, jobs) query executions.",
+  "tables": [
+    {
+      "table_name": "history",
+      "path": "system.query.history",
+      "comment": "SQL & serverless query history across workspaces in a region.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "11e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace where the query ran.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "statement_id",
+          "type": "string",
+          "description": "Unique execution ID for the statement.",
+          "example": "7a99b43c-b46c-432b-b0a7-814217701909"
+        },
+        {
+          "name": "session_id",
+          "type": "string",
+          "description": "Spark session ID.",
+          "example": "01234567-cr06-a2mp-t0nd-a14ecfb5a9c2"
+        },
+        {
+          "name": "execution_status",
+          "type": "string",
+          "description": "FINISHED | FAILED | CANCELED.",
+          "example": "FINISHED"
+        },
+        {
+          "name": "compute",
+          "type": "struct",
+          "description": "Type of compute used plus resource IDs.",
+          "example": {
+            "type": "WAREHOUSE",
+            "cluster_id": null,
+            "warehouse_id": "ec58ee3772e8d305"
+          }
+        },
+        {
+          "name": "executed_by_user_id",
+          "type": "string",
+          "description": "ID of the user who ran the statement.",
+          "example": "2967555311742259"
+        },
+        {
+          "name": "executed_by",
+          "type": "string",
+          "description": "Email/username of the user.",
+          "example": "example@databricks.com"
+        },
+        {
+          "name": "executed_as",
+          "type": "string",
+          "description": "Name of user/service principal whose privilege was used.",
+          "example": "example@databricks.com"
+        },
+        {
+          "name": "executed_as_user_id",
+          "type": "string",
+          "description": "ID of the user/service principal whose privilege was used.",
+          "example": "2967555311742259"
+        },
+        {
+          "name": "statement_text",
+          "type": "string",
+          "description": "Text of the SQL statement (may be empty when CMK is configured; long statements compressed).",
+          "example": "SELECT 1"
+        },
+        {
+          "name": "statement_type",
+          "type": "string",
+          "description": "Statement type (e.g., SELECT, INSERT, ALTER).",
+          "example": "SELECT"
+        },
+        {
+          "name": "error_message",
+          "type": "string",
+          "description": "Error message if failed (empty with CMK).",
+          "example": "[INSUFFICIENT_PERMISSIONS] ..."
+        },
+        {
+          "name": "client_application",
+          "type": "string",
+          "description": "Client application that ran the statement.",
+          "example": "Databricks SQL Editor"
+        },
+        {
+          "name": "client_driver",
+          "type": "string",
+          "description": "Connector used to connect.",
+          "example": "Databricks JDBC Driver"
+        },
+        {
+          "name": "cache_origin_statement_id",
+          "type": "string",
+          "description": "If results came from cache, ID of the origin statement; otherwise the statement's own ID.",
+          "example": "01f034de-5e17-162d-a176-1f319b12707b"
+        },
+        {
+          "name": "total_duration_ms",
+          "type": "bigint",
+          "description": "Total execution time in ms (excluding result fetch).",
+          "example": 1
+        },
+        {
+          "name": "waiting_for_compute_duration_ms",
+          "type": "bigint",
+          "description": "Time waiting for compute provisioning in ms.",
+          "example": 1
+        },
+        {
+          "name": "waiting_at_capacity_duration_ms",
+          "type": "bigint",
+          "description": "Time waiting in capacity queue in ms.",
+          "example": 1
+        },
+        {
+          "name": "execution_duration_ms",
+          "type": "bigint",
+          "description": "Time executing the statement in ms.",
+          "example": 1
+        },
+        {
+          "name": "compilation_duration_ms",
+          "type": "bigint",
+          "description": "Time loading metadata/optimizing in ms.",
+          "example": 1
+        },
+        {
+          "name": "total_task_duration_ms",
+          "type": "bigint",
+          "description": "Sum of all task durations in ms across nodes.",
+          "example": 1
+        },
+        {
+          "name": "result_fetch_duration_ms",
+          "type": "bigint",
+          "description": "Time in ms fetching results after execution.",
+          "example": 1
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp",
+          "description": "Request received time (UTC).",
+          "example": "2022-12-05T00:00:00.000+0000"
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "description": "Execution end time (UTC).",
+          "example": "2022-12-05T00:00:00.000+00:00"
+        },
+        {
+          "name": "update_time",
+          "type": "timestamp",
+          "description": "Last progress update time (UTC).",
+          "example": "2022-12-05T00:00:00.000+00:00"
+        },
+        {
+          "name": "read_partitions",
+          "type": "bigint",
+          "description": "Number of partitions read after pruning.",
+          "example": 1
+        },
+        {
+          "name": "pruned_files",
+          "type": "bigint",
+          "description": "Number of pruned files.",
+          "example": 1
+        },
+        {
+          "name": "read_files",
+          "type": "bigint",
+          "description": "Number of files read after pruning.",
+          "example": 1
+        },
+        {
+          "name": "read_rows",
+          "type": "bigint",
+          "description": "Total rows read.",
+          "example": 1
+        },
+        {
+          "name": "produced_rows",
+          "type": "bigint",
+          "description": "Total rows produced.",
+          "example": 1
+        },
+        {
+          "name": "read_bytes",
+          "type": "bigint",
+          "description": "Total bytes read.",
+          "example": 1
+        },
+        {
+          "name": "read_io_cache_percent",
+          "type": "int",
+          "description": "Percent of bytes read from IO cache.",
+          "example": 50
+        },
+        {
+          "name": "from_result_cache",
+          "type": "boolean",
+          "description": "TRUE if result fetched from cache.",
+          "example": true
+        },
+        {
+          "name": "spilled_local_bytes",
+          "type": "bigint",
+          "description": "Bytes temporarily written to disk.",
+          "example": 1
+        },
+        {
+          "name": "written_bytes",
+          "type": "bigint",
+          "description": "Bytes written to cloud object storage.",
+          "example": 1
+        },
+        {
+          "name": "written_rows",
+          "type": "bigint",
+          "description": "Rows written to cloud object storage.",
+          "example": 1
+        },
+        {
+          "name": "written_files",
+          "type": "bigint",
+          "description": "Files written to cloud object storage.",
+          "example": 1
+        },
+        {
+          "name": "shuffle_read_bytes",
+          "type": "bigint",
+          "description": "Total bytes sent over the network.",
+          "example": 1
+        },
+        {
+          "name": "query_source",
+          "type": "struct",
+          "description": "Source information (alert, dashboard, notebook, job ids, etc.).",
+          "example": {
+            "alert_id": "81191d77-184f-4c4e-9998-b6a4b5f4cef1",
+            "sql_query_id": null,
+            "dashboard_id": null,
+            "notebook_id": null,
+            "job_info": {
+              "job_id": 12781233243479,
+              "job_run_id": null,
+              "job_task_run_id": 110373910199121
+            },
+            "legacy_dashboard_id": null,
+            "genie_space_id": null
+          }
+        },
+        {
+          "name": "query_parameters",
+          "type": "struct",
+          "description": "Named/positional parameters; mutually exclusive; truncation flag.",
+          "example": {
+            "named_parameters": {
+              "param-1": 1,
+              "param-2": "hello"
+            },
+            "pos_parameters": null,
+            "is_truncated": false
+          }
+        }
+      ]
+    }
+  ]
+}

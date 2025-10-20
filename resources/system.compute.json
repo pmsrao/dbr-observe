@@ -1,0 +1,448 @@
+{
+  "schema": "system.compute",
+  "comment": "Clusters, node types, node-level utilization, warehouses, and warehouse events.",
+  "tables": [
+    {
+      "table_name": "clusters",
+      "path": "system.compute.clusters",
+      "comment": "SCD of cluster configurations (all-purpose, jobs, declarative pipelines, maintenance).",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account where the cluster was created.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace where the cluster was created.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "cluster_id",
+          "type": "string",
+          "description": "Cluster ID.",
+          "example": "0000-123456-xxxxxxxx"
+        },
+        {
+          "name": "cluster_name",
+          "type": "string",
+          "description": "User-defined cluster name.",
+          "example": "My cluster"
+        },
+        {
+          "name": "owned_by",
+          "type": "string",
+          "description": "Username of cluster owner.",
+          "example": "sample_user@email.com"
+        },
+        {
+          "name": "create_time",
+          "type": "timestamp",
+          "description": "Timestamp of change to compute definition.",
+          "example": "2023-01-09 11:00:00.000"
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp",
+          "description": "When cluster was deleted (null if active)."
+        },
+        {
+          "name": "driver_node_type",
+          "type": "string",
+          "description": "Instance type for driver.",
+          "example": "i3.xlarge"
+        },
+        {
+          "name": "worker_node_type",
+          "type": "string",
+          "description": "Instance type for workers.",
+          "example": "i3.xlarge"
+        },
+        {
+          "name": "worker_count",
+          "type": "bigint",
+          "description": "Fixed number of workers (fixed-size clusters).",
+          "example": 4
+        },
+        {
+          "name": "min_autoscale_workers",
+          "type": "bigint",
+          "description": "Minimum autoscale workers (autoscaling only).",
+          "example": 1
+        },
+        {
+          "name": "max_autoscale_workers",
+          "type": "bigint",
+          "description": "Maximum autoscale workers (autoscaling only).",
+          "example": 1
+        },
+        {
+          "name": "auto_termination_minutes",
+          "type": "bigint",
+          "description": "Auto-termination minutes.",
+          "example": 120
+        },
+        {
+          "name": "enable_elastic_disk",
+          "type": "boolean",
+          "description": "Autoscaling disk enabled.",
+          "example": true
+        },
+        {
+          "name": "tags",
+          "type": "map<string,string>",
+          "description": "User-defined tags (excluding defaults).",
+          "example": {
+            "ResourceClass": "SingleNode"
+          }
+        },
+        {
+          "name": "cluster_source",
+          "type": "string",
+          "description": "Source: UI, API, JOB, PIPELINE, or PIPELINE_MAINTENANCE.",
+          "example": "UI"
+        },
+        {
+          "name": "init_scripts",
+          "type": "array<string>",
+          "description": "Paths to init scripts.",
+          "example": [
+            "/Users/me/files/install.sh"
+          ]
+        },
+        {
+          "name": "aws_attributes",
+          "type": "struct",
+          "description": "AWS-specific settings.",
+          "example": {
+            "availability": "SPOT_WITH_FALLBACK",
+            "spot_bid_price_percent": "100"
+          }
+        },
+        {
+          "name": "azure_attributes",
+          "type": "struct",
+          "description": "Azure-specific settings."
+        },
+        {
+          "name": "gcp_attributes",
+          "type": "struct",
+          "description": "GCP-specific settings."
+        },
+        {
+          "name": "driver_instance_pool_id",
+          "type": "string",
+          "description": "Instance pool ID for driver (if used).",
+          "example": "1107-555555-crhod16-pool-DIdnjazB"
+        },
+        {
+          "name": "worker_instance_pool_id",
+          "type": "string",
+          "description": "Instance pool ID for worker (if used).",
+          "example": "1107-555555-crhod16-pool-DIdnjazB"
+        },
+        {
+          "name": "dbr_version",
+          "type": "string",
+          "description": "Databricks Runtime version.",
+          "example": "14.x-snapshot-scala2.12"
+        },
+        {
+          "name": "change_time",
+          "type": "timestamp",
+          "description": "Timestamp of change to compute definition.",
+          "example": "2023-01-09 11:00:00.000"
+        },
+        {
+          "name": "change_date",
+          "type": "date",
+          "description": "Change date (for retention).",
+          "example": "2023-01-09"
+        },
+        {
+          "name": "data_security_mode",
+          "type": "string",
+          "description": "Access mode (e.g., USER_ISOLATION, SINGLE_USER, legacy values).",
+          "example": "USER_ISOLATION"
+        },
+        {
+          "name": "policy_id",
+          "type": "string",
+          "description": "Compute policy ID, if applied.",
+          "example": "1234F35636110A5B"
+        }
+      ]
+    },
+    {
+      "table_name": "node_types",
+      "path": "system.compute.node_types",
+      "comment": "Available node types and hardware info.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "node_type",
+          "type": "string",
+          "description": "Cloud instance type identifier.",
+          "example": "i3.xlarge"
+        },
+        {
+          "name": "core_count",
+          "type": "double",
+          "description": "vCPU count.",
+          "example": 48.0
+        },
+        {
+          "name": "memory_mb",
+          "type": "long",
+          "description": "Memory in MB.",
+          "example": 393216
+        },
+        {
+          "name": "gpu_count",
+          "type": "long",
+          "description": "Number of GPUs.",
+          "example": 0
+        }
+      ]
+    },
+    {
+      "table_name": "node_timeline",
+      "path": "system.compute.node_timeline",
+      "comment": "Minute-level node utilization metrics.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "cluster_id",
+          "type": "string",
+          "description": "Compute resource ID.",
+          "example": "0000-123456-crmpt124"
+        },
+        {
+          "name": "instance_id",
+          "type": "string",
+          "description": "Cloud instance ID.",
+          "example": "i-1234a6c12a2681234"
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp",
+          "description": "Start time (UTC).",
+          "example": "2024-07-16T12:00:00Z"
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "description": "End time (UTC).",
+          "example": "2024-07-16T13:00:00Z"
+        },
+        {
+          "name": "driver",
+          "type": "boolean",
+          "description": "True if driver node record.",
+          "example": true
+        },
+        {
+          "name": "cpu_user_percent",
+          "type": "double",
+          "description": "CPU userland percentage.",
+          "example": 34.7616
+        },
+        {
+          "name": "cpu_system_percent",
+          "type": "double",
+          "description": "CPU kernel percentage.",
+          "example": 1.0895
+        },
+        {
+          "name": "cpu_wait_percent",
+          "type": "double",
+          "description": "CPU I/O wait percentage.",
+          "example": 0.0344
+        },
+        {
+          "name": "mem_used_percent",
+          "type": "double",
+          "description": "Memory used percent.",
+          "example": 45.3486
+        },
+        {
+          "name": "mem_swap_percent",
+          "type": "double",
+          "description": "Swap memory percent.",
+          "example": 0.0146
+        },
+        {
+          "name": "network_sent_bytes",
+          "type": "bigint",
+          "description": "Bytes sent.",
+          "example": 517376
+        },
+        {
+          "name": "network_received_bytes",
+          "type": "bigint",
+          "description": "Bytes received.",
+          "example": 179234
+        },
+        {
+          "name": "disk_free_bytes_per_mount_point",
+          "type": "map<string,long>",
+          "description": "Free bytes by mount point.",
+          "example": {
+            "/": 104857600
+          }
+        }
+      ]
+    },
+    {
+      "table_name": "warehouses",
+      "path": "system.compute.warehouses",
+      "comment": "Snapshots of SQL warehouse properties (new row on change).",
+      "columns": [
+        {
+          "name": "warehouse_id",
+          "type": "string",
+          "description": "SQL warehouse ID.",
+          "example": "123456789012345"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace where warehouse is deployed.",
+          "example": "123456789012345"
+        },
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "7af234db-66d7-4db3-bbf0-956098224879"
+        },
+        {
+          "name": "warehouse_name",
+          "type": "string",
+          "description": "Warehouse name.",
+          "example": "My Serverless Warehouse"
+        },
+        {
+          "name": "warehouse_type",
+          "type": "string",
+          "description": "Warehouse type.",
+          "example": "SERVERLESS",
+          "notes": "Possible: CLASSIC, PRO, SERVERLESS"
+        },
+        {
+          "name": "warehouse_channel",
+          "type": "string",
+          "description": "Release channel.",
+          "example": "CURRENT",
+          "notes": "Possible: CURRENT, PREVIEW"
+        },
+        {
+          "name": "warehouse_size",
+          "type": "string",
+          "description": "Cluster size.",
+          "example": "MEDIUM",
+          "notes": "2X_SMALL..4X_LARGE"
+        },
+        {
+          "name": "min_clusters",
+          "type": "int",
+          "description": "Min clusters allowed.",
+          "example": 1
+        },
+        {
+          "name": "max_clusters",
+          "type": "int",
+          "description": "Max clusters allowed.",
+          "example": 5
+        },
+        {
+          "name": "auto_stop_minutes",
+          "type": "int",
+          "description": "Auto-stop idle minutes.",
+          "example": 35
+        },
+        {
+          "name": "tags",
+          "type": "map<string,string>",
+          "description": "Warehouse tags.",
+          "example": {
+            "budget": "research"
+          }
+        },
+        {
+          "name": "change_time",
+          "type": "timestamp",
+          "description": "Definition change time.",
+          "example": "2023-07-20T19:13:09.504Z"
+        },
+        {
+          "name": "delete_time",
+          "type": "timestamp",
+          "description": "Deletion timestamp (null if active)."
+        }
+      ]
+    },
+    {
+      "table_name": "warehouse_events",
+      "path": "system.compute.warehouse_events",
+      "comment": "Event log for SQL warehouses (start/stop/scale).",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "7af234db-66d7-4db3-bbf0-956098224879"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace ID.",
+          "example": "123456789012345"
+        },
+        {
+          "name": "warehouse_id",
+          "type": "string",
+          "description": "Warehouse ID.",
+          "example": "123456789012345"
+        },
+        {
+          "name": "event_type",
+          "type": "string",
+          "description": "Event type.",
+          "example": "SCALED_UP",
+          "notes": "Possible: SCALED_UP, SCALED_DOWN, STOPPING, RUNNING, STARTING, STOPPED"
+        },
+        {
+          "name": "cluster_count",
+          "type": "integer",
+          "description": "Active clusters at event time.",
+          "example": 2
+        },
+        {
+          "name": "event_time",
+          "type": "timestamp",
+          "description": "Event timestamp (UTC).",
+          "example": "2023-07-20T19:13:09.504Z"
+        }
+      ]
+    }
+  ]
+}

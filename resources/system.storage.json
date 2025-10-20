@@ -1,0 +1,80 @@
+{
+  "schema": "system.storage",
+  "comment": "Predictive optimization operation history for managed tables.",
+  "tables": [
+    {
+      "table_name": "predictive_optimization_operations_history",
+      "path": "system.storage.predictive_optimization_operations_history",
+      "comment": "Operation history and impact of predictive optimization.",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "Account ID.",
+          "example": "11e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "Workspace where the operation ran.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp",
+          "description": "Operation start time.",
+          "example": "2025-06-01T12:00:00Z"
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp",
+          "description": "Operation end time.",
+          "example": "2025-06-01T12:05:00Z"
+        },
+        {
+          "name": "operation_type",
+          "type": "string",
+          "description": "Operation performed.",
+          "example": "VACUUM",
+          "notes": "Possible: ANALYZE, OPTIMIZE, VACUUM"
+        },
+        {
+          "name": "object_type",
+          "type": "string",
+          "description": "Securable/object type.",
+          "example": "TABLE"
+        },
+        {
+          "name": "object_id",
+          "type": "string",
+          "description": "Object identifier (e.g., table id).",
+          "example": "597a..."
+        },
+        {
+          "name": "object_name",
+          "type": "string",
+          "description": "Full UC name of the object.",
+          "example": "main.sales.events"
+        },
+        {
+          "name": "rows_affected",
+          "type": "long",
+          "description": "Rows affected (if applicable).",
+          "example": 123456
+        },
+        {
+          "name": "bytes_optimized",
+          "type": "long",
+          "description": "Optimized bytes (if applicable).",
+          "example": 104857600
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "description": "Result status of the operation.",
+          "example": "COMPLETED"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "schema": "system.billing",
+  "comment": "Billing usage and list pricing for SKUs. Use with other system tables for cost attribution.",
+  "tables": [
+    {
+      "table_name": "usage",
+      "path": "system.billing.usage",
+      "comment": "Global hourly billable usage across your account; join to list_prices for list-cost.",
+      "columns": [
+        {
+          "name": "record_id",
+          "type": "string",
+          "description": "Unique identifier for this usage record.",
+          "example": "11e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "account_id",
+          "type": "string",
+          "description": "ID of the Databricks account.",
+          "example": "23e22ba4-87b9-4cc2-9770-d10b894b7118"
+        },
+        {
+          "name": "workspace_id",
+          "type": "string",
+          "description": "ID of the workspace associated with this usage.",
+          "example": "1234567890123456"
+        },
+        {
+          "name": "sku_name",
+          "type": "string",
+          "description": "SKU name for the billed product/workload.",
+          "example": "STANDARD_ALL_PURPOSE_COMPUTE"
+        },
+        {
+          "name": "cloud",
+          "type": "string",
+          "description": "Cloud where the usage occurred.",
+          "example": "AWS",
+          "notes": "Possible values: AWS, AZURE, GCP"
+        },
+        {
+          "name": "usage_start_time",
+          "type": "timestamp",
+          "description": "Start time relevant to this usage; timezone encoded (e.g., +00:00 for UTC).",
+          "example": "2023-01-09 10:00:00.000+00:00"
+        },
+        {
+          "name": "usage_end_time",
+          "type": "timestamp",
+          "description": "End time relevant to this usage; timezone encoded.",
+          "example": "2023-01-09 11:00:00.000+00:00"
+        },
+        {
+          "name": "usage_date",
+          "type": "date",
+          "description": "Calendar date for aggregation.",
+          "example": "2023-01-01"
+        },
+        {
+          "name": "custom_tags",
+          "type": "map<string,string>",
+          "description": "Custom tags associated with the usage record.",
+          "example": {
+            "env": "production"
+          }
+        },
+        {
+          "name": "usage_unit",
+          "type": "string",
+          "description": "Unit of measure.",
+          "example": "DBU"
+        },
+        {
+          "name": "usage_quantity",
+          "type": "decimal",
+          "description": "Number of units consumed for this record.",
+          "example": 259.2958
+        },
+        {
+          "name": "usage_metadata",
+          "type": "struct",
+          "description": "Metadata about resources (cluster, job, warehouse, etc.). See notes for fields.",
+          "notes": {
+            "cluster_id": "non-serverless compute workload",
+            "job_id": "serverless jobs and job compute",
+            "warehouse_id": "SQL warehouse workloads",
+            "instance_pool_id": "compute from instance pools",
+            "node_type": "instance type of compute resource",
+            "job_run_id": "serverless jobs and job compute",
+            "notebook_id": "serverless notebooks",
+            "dlt_pipeline_id": "Lakeflow Declarative Pipelines and dependent features",
+            "endpoint_name": "model serving or vector search",
+            "endpoint_id": "model serving or vector search",
+            "dlt_update_id": "pipeline update id",
+            "dlt_maintenance_id": "pipeline maintenance id",
+            "metastore_id": "metastore associated with default storage",
+            "job_name": "populated for job compute (since Sep 2025)",
+            "notebook_path": "serverless notebooks path",
+            "central_clean_room_id": "clean rooms",
+            "source_region": "serverless networking source region",
+            "destination_region": "serverless networking destination region",
+            "app_id/app_name": "Databricks Apps",
+            "budget_policy_id": "serverless budget policy id",
+            "base_environment_id": "serverless base environment id"
+          }
+        },
+        {
+          "name": "identity_metadata",
+          "type": "struct",
+          "description": "Metadata about identities involved in the usage.",
+          "notes": {
+            "run_as": "identity used to run the workload (varies by workload type)",
+            "owned_by": "owner for SQL warehouses",
+            "created_by": "applies to Databricks Apps"
+          }
+        },
+        {
+          "name": "record_type",
+          "type": "string",
+          "description": "Whether record is ORIGINAL, RETRACTION, or RESTATEMENT.",
+          "example": "ORIGINAL"
+        },
+        {
+          "name": "ingestion_date",
+          "type": "date",
+          "description": "Date the record was ingested into the usage table.",
+          "example": "2024-01-01"
+        },
+        {
+          "name": "billing_origin_product",
+          "type": "string",
+          "description": "Product that originated the usage.",
+          "example": "JOBS"
+        },
+        {
+          "name": "product_features",
+          "type": "struct",
+          "description": "Feature flags/details for the product; varies by product.",
+          "notes": {
+            "serving_type": "MODEL | GPU_MODEL | FOUNDATION_MODEL | FEATURE | null",
+            "offering_type": "BATCH_INFERENCE | null",
+            "performance_target": "PERFORMANCE_OPTIMIZED | STANDARD | null",
+            "networking.connectivity_type": "PUBLIC_IP | PRIVATE_IP"
+          }
+        },
+        {
+          "name": "usage_type",
+          "type": "string",
+          "description": "Type of usage for billing purposes.",
+          "example": "STORAGE_SPACE",
+          "notes": "Possible values include: COMPUTE_TIME, STORAGE_SPACE, NETWORK_BYTE, NETWORK_HOUR, API_OPERATION, TOKEN, GPU_TIME"
+        }
+      ]
+    },
+    {
+      "table_name": "list_prices",
+      "path": "system.billing.list_prices",
+      "comment": "Historical log of SKU list prices (Type 2 SCD).",
+      "columns": [
+        {
+          "name": "sku_name",
+          "type": "string",
+          "description": "SKU name for the priced service.",
+          "example": "STANDARD_ALL_PURPOSE_COMPUTE"
+        },
+        {
+          "name": "cloud",
+          "type": "string",
+          "description": "Cloud provider for the SKU price.",
+          "example": "AWS"
+        },
+        {
+          "name": "usage_unit",
+          "type": "string",
+          "description": "Unit of measure the price applies to.",
+          "example": "DBU"
+        },
+        {
+          "name": "currency_code",
+          "type": "string",
+          "description": "Currency code.",
+          "example": "USD"
+        },
+        {
+          "name": "price_start_time",
+          "type": "timestamp",
+          "description": "Start time when this price took effect.",
+          "example": "2024-01-01T00:00:00Z"
+        },
+        {
+          "name": "price_end_time",
+          "type": "timestamp",
+          "description": "End time when this price stopped being effective (null if current)."
+        },
+        {
+          "name": "pricing",
+          "type": "struct",
+          "description": "Pricing info (e.g., default list price).",
+          "example": {
+            "default": 0.55
+          }
+        }
+      ]
+    }
+  ]
+}
