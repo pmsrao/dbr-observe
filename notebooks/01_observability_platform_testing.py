@@ -197,7 +197,7 @@ import sys
 import os
 
 # Add src directory to path
-sys.path.append('/Workspace/Repos/your-username/dbr-observe/src')
+sys.path.append('/Workspace/Repos/dev/dbr-observe/src')
 
 from python.functions.watermark_management import WatermarkManager, get_watermark, update_watermark
 from python.functions.scd2_processing import SCD2Processor, merge_compute_entities_scd2, merge_workflow_entities_scd2

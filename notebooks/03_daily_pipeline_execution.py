@@ -21,7 +21,7 @@ import os
 from datetime import datetime, timedelta
 
 # Add src directory to path
-sys.path.append('/Workspace/Repos/your-username/dbr-observe/src')
+sys.path.append('/Workspace/Repos/dev/dbr-observe/src')
 
 from python.processing.daily_observability_pipeline import DailyObservabilityPipeline
 from python.functions.watermark_management import WatermarkManager
@@ -58,9 +58,11 @@ try:
     # Display pipeline configuration
     print("📋 Pipeline Configuration:")
     print(f"   - Catalog: {pipeline.catalog}")
-    print(f"   - Bronze Schema: {pipeline.bronze_schema}")
-    print(f"   - Silver Schema: {pipeline.silver_schema}")
-    print(f"   - Gold Schema: {pipeline.gold_schema}")
+    print(f"   - Lookback Days: {pipeline.lookback_days}")
+    print(f"   - Processing Timestamp: {pipeline.processing_timestamp}")
+    print(f"   - Watermark Manager: Available")
+    print(f"   - SCD2 Processor: Available")
+    print(f"   - Tag Extractor: Available")
     
 except Exception as e:
     print(f"❌ Pipeline initialization error: {str(e)}")

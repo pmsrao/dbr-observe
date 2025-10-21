@@ -48,8 +48,32 @@ class SCD2Processor:
             True if successful, False otherwise
         """
         try:
+            # Flatten the raw_data structure and add computed columns
+            flattened_df = source_df.select(
+                col("workspace_id"),
+                col("change_time"),
+                col("raw_data.cluster_id").alias("compute_id"),
+                lit("cluster").alias("compute_type"),  # All clusters are of type "cluster"
+                col("raw_data.name"),
+                col("raw_data.owner"),
+                col("raw_data.driver_node_type"),
+                col("raw_data.worker_node_type"),
+                col("raw_data.worker_count"),
+                col("raw_data.min_autoscale_workers"),
+                col("raw_data.max_autoscale_workers"),
+                col("raw_data.auto_termination_minutes"),
+                col("raw_data.enable_elastic_disk"),
+                col("raw_data.data_security_mode"),
+                col("raw_data.policy_id"),
+                col("raw_data.dbr_version"),
+                col("raw_data.cluster_source"),
+                col("raw_data.tags"),
+                col("raw_data.create_time"),
+                col("raw_data.delete_time")
+            )
+            
             # Generate record hash for change detection
-            source_with_hash = source_df.withColumn(
+            source_with_hash = flattened_df.withColumn(
                 "record_hash",
                 sha2(
                     concat_ws("|",
@@ -69,12 +93,6 @@ class SCD2Processor:
                         coalesce(col("policy_id"), lit("")),
                         coalesce(col("dbr_version"), lit("")),
                         coalesce(col("cluster_source"), lit("")),
-                        coalesce(col("warehouse_type"), lit("")),
-                        coalesce(col("warehouse_size"), lit("")),
-                        coalesce(col("warehouse_channel"), lit("")),
-                        coalesce(col("min_clusters").cast("string"), lit("")),
-                        coalesce(col("max_clusters").cast("string"), lit("")),
-                        coalesce(col("auto_stop_minutes").cast("string"), lit("")),
                         coalesce(col("tags"), lit(""))
                     ), 256
                 )
@@ -140,8 +158,24 @@ class SCD2Processor:
             True if successful, False otherwise
         """
         try:
+            # Flatten the raw_data structure and add computed columns
+            flattened_df = source_df.select(
+                col("workspace_id"),
+                col("change_time"),
+                col("raw_data.job_id").alias("workflow_id"),
+                lit("job").alias("workflow_type"),  # All lakeflow jobs are of type "job"
+                col("raw_data.name"),
+                col("raw_data.description"),
+                col("raw_data.creator_id").alias("owner"),
+                col("raw_data.run_as"),
+                col("raw_data.job_parameters").alias("settings"),
+                col("raw_data.tags"),
+                col("raw_data.create_time"),
+                col("raw_data.delete_time")
+            )
+            
             # Generate record hash for change detection
-            source_with_hash = source_df.withColumn(
+            source_with_hash = flattened_df.withColumn(
                 "record_hash",
                 sha2(
                     concat_ws("|",

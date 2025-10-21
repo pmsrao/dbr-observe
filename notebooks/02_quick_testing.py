@@ -80,7 +80,7 @@ print("✅ Switched back to obs catalog")
 
 # Import and test PySpark functions
 import sys
-sys.path.append('/Workspace/Repos/your-username/dbr-observe/src')
+sys.path.append('/Workspace/Repos/dev/dbr-observe/src')
 
 try:
     from python.functions.watermark_management import WatermarkManager

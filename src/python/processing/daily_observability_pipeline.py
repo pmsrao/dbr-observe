@@ -146,7 +146,7 @@ class DailyObservabilityPipeline:
             
             # Read source data
             source_df = self.spark.table("obs.bronze.system_compute_clusters") \
-                .filter(col("raw_data.change_time") >= watermark)
+                .filter(col("change_time") >= watermark)
             
             # Process with SCD2
             success = self.scd2_processor.merge_compute_entities_scd2(
@@ -156,7 +156,7 @@ class DailyObservabilityPipeline:
             
             if success:
                 # Update watermark
-                latest_timestamp = source_df.select("raw_data.change_time").orderBy(col("raw_data.change_time").desc()).limit(1).collect()
+                latest_timestamp = source_df.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
                 if latest_timestamp:
                     self.watermark_manager.update_watermark(
                         "system.compute.clusters",
@@ -190,7 +190,7 @@ class DailyObservabilityPipeline:
             
             # Read source data
             source_df = self.spark.table("obs.bronze.system_lakeflow_jobs") \
-                .filter(col("raw_data.change_time") >= watermark)
+                .filter(col("change_time") >= watermark)
             
             # Process with SCD2
             success = self.scd2_processor.merge_workflow_entities_scd2(
@@ -200,7 +200,7 @@ class DailyObservabilityPipeline:
             
             if success:
                 # Update watermark
-                latest_timestamp = source_df.select("raw_data.change_time").orderBy(col("raw_data.change_time").desc()).limit(1).collect()
+                latest_timestamp = source_df.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
                 if latest_timestamp:
                     self.watermark_manager.update_watermark(
                         "system.lakeflow.jobs",
