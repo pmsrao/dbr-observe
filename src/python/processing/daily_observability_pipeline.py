@@ -440,13 +440,14 @@ class DailyObservabilityPipeline:
                         col("job_id").alias("job_id"),
                         col("workspace_id").alias("workspace_id"),
                         col("name").alias("name"),
-                        # Note: description might not exist in system table
-                        lit(None).cast("string").alias("description"),
+                        col("description").alias("description"),
                         col("creator_id").alias("creator_id"),
                         col("run_as").alias("run_as"),
-                        col("job_parameters").alias("job_parameters"),
+                        # Note: job_parameters doesn't exist in system table
+                        lit(None).cast("string").alias("job_parameters"),
                         col("tags").alias("tags"),
-                        col("create_time").alias("create_time"),
+                        # Note: create_time doesn't exist in system table
+                        lit(None).cast("timestamp").alias("create_time"),
                         col("delete_time").alias("delete_time"),
                         col("change_time").alias("change_time")
                     ).alias("raw_data"),
@@ -461,10 +462,10 @@ class DailyObservabilityPipeline:
                             col("workspace_id"),
                             col("job_id"),
                             col("name"),
-                            lit("").alias("description"),  # Use empty string for missing description
+                            col("description"),
                             col("creator_id"),
                             col("run_as"),
-                            col("job_parameters").cast("string"),
+                            lit("").alias("job_parameters"),  # Use empty string for missing job_parameters
                             col("tags").cast("string")
                         ), 256
                     ).alias("record_hash"),
