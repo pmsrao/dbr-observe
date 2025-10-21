@@ -9,7 +9,7 @@ Date: December 2024
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, current_timestamp, lit, when, coalesce, sha2, concat_ws
+from pyspark.sql.functions import col, current_timestamp, lit, when, coalesce, sha2, concat_ws, struct
 from pyspark.sql.types import TimestampType
 import logging
 import sys
@@ -362,57 +362,59 @@ class DailyObservabilityPipeline:
             # Read from system table and transform to bronze format
             compute_source = self.spark.table("system.compute.clusters")
             
-            # Transform to bronze format with raw_data structure
-            compute_bronze = compute_source.select(
-                # Create raw_data struct with all the original fields
-                col("cluster_id").alias("raw_data.cluster_id"),
-                col("workspace_id").alias("raw_data.workspace_id"),
-                col("cluster_name").alias("raw_data.name"),
-                col("owned_by").alias("raw_data.owner"),
-                col("driver_node_type").alias("raw_data.driver_node_type"),
-                col("worker_node_type").alias("raw_data.worker_node_type"),
-                col("worker_count").alias("raw_data.worker_count"),
-                col("min_autoscale_workers").alias("raw_data.min_autoscale_workers"),
-                col("max_autoscale_workers").alias("raw_data.max_autoscale_workers"),
-                col("auto_termination_minutes").alias("raw_data.auto_termination_minutes"),
-                col("enable_elastic_disk").alias("raw_data.enable_elastic_disk"),
-                # Note: data_security_mode, policy_id might not exist in system table
-                lit(None).cast("string").alias("raw_data.data_security_mode"),
-                lit(None).cast("string").alias("raw_data.policy_id"),
-                col("dbr_version").alias("raw_data.dbr_version"),
-                col("cluster_source").alias("raw_data.cluster_source"),
-                col("tags").alias("raw_data.tags"),
-                col("create_time").alias("raw_data.create_time"),
-                col("delete_time").alias("raw_data.delete_time"),
-                col("change_time").alias("raw_data.change_time"),
-                # Bronze layer columns
-                col("workspace_id"),
-                col("change_time"),
-                current_timestamp().alias("ingestion_timestamp"),
-                lit("system.compute.clusters").alias("source_file"),
-                # Generate record hash
-                sha2(
-                    concat_ws("|",
-                        col("workspace_id"),
-                        col("cluster_id"),
-                        col("cluster_name"),
-                        col("owned_by"),
-                        col("driver_node_type"),
-                        col("worker_node_type"),
-                        col("worker_count").cast("string"),
-                        col("min_autoscale_workers").cast("string"),
-                        col("max_autoscale_workers").cast("string"),
-                        col("auto_termination_minutes").cast("string"),
-                        col("enable_elastic_disk").cast("string"),
-                        lit("").alias("data_security_mode"),
-                        lit("").alias("policy_id"),
-                        col("dbr_version"),
-                        col("cluster_source"),
-                        col("tags").cast("string")
-                    ), 256
-                ).alias("record_hash"),
-                lit(False).alias("is_deleted")
-            )
+                # Transform to bronze format with raw_data structure
+                compute_bronze = compute_source.select(
+                    # Create raw_data struct with all the original fields
+                    struct(
+                        col("cluster_id").alias("cluster_id"),
+                        col("workspace_id").alias("workspace_id"),
+                        col("cluster_name").alias("name"),
+                        col("owned_by").alias("owner"),
+                        col("driver_node_type").alias("driver_node_type"),
+                        col("worker_node_type").alias("worker_node_type"),
+                        col("worker_count").alias("worker_count"),
+                        col("min_autoscale_workers").alias("min_autoscale_workers"),
+                        col("max_autoscale_workers").alias("max_autoscale_workers"),
+                        col("auto_termination_minutes").alias("auto_termination_minutes"),
+                        col("enable_elastic_disk").alias("enable_elastic_disk"),
+                        # Note: data_security_mode, policy_id might not exist in system table
+                        lit(None).cast("string").alias("data_security_mode"),
+                        lit(None).cast("string").alias("policy_id"),
+                        col("dbr_version").alias("dbr_version"),
+                        col("cluster_source").alias("cluster_source"),
+                        col("tags").alias("tags"),
+                        col("create_time").alias("create_time"),
+                        col("delete_time").alias("delete_time"),
+                        col("change_time").alias("change_time")
+                    ).alias("raw_data"),
+                    # Bronze layer columns
+                    col("workspace_id"),
+                    col("change_time"),
+                    current_timestamp().alias("ingestion_timestamp"),
+                    lit("system.compute.clusters").alias("source_file"),
+                    # Generate record hash
+                    sha2(
+                        concat_ws("|",
+                            col("workspace_id"),
+                            col("cluster_id"),
+                            col("cluster_name"),
+                            col("owned_by"),
+                            col("driver_node_type"),
+                            col("worker_node_type"),
+                            col("worker_count").cast("string"),
+                            col("min_autoscale_workers").cast("string"),
+                            col("max_autoscale_workers").cast("string"),
+                            col("auto_termination_minutes").cast("string"),
+                            col("enable_elastic_disk").cast("string"),
+                            lit("").alias("data_security_mode"),
+                            lit("").alias("policy_id"),
+                            col("dbr_version"),
+                            col("cluster_source"),
+                            col("tags").cast("string")
+                        ), 256
+                    ).alias("record_hash"),
+                    lit(False).alias("is_deleted")
+                )
             
             # Write to bronze table
             compute_bronze.write.mode("append").saveAsTable(f"{self.catalog}.bronze.system_compute_clusters")
@@ -431,40 +433,43 @@ class DailyObservabilityPipeline:
             # Read from system table and transform to bronze format
             lakeflow_source = self.spark.table("system.lakeflow.jobs")
             
-            # Transform to bronze format with raw_data structure
-            lakeflow_bronze = lakeflow_source.select(
-                # Create raw_data struct with all the original fields
-                col("job_id").alias("raw_data.job_id"),
-                col("workspace_id").alias("raw_data.workspace_id"),
-                col("name").alias("raw_data.name"),
-                col("description").alias("raw_data.description"),
-                col("creator_id").alias("raw_data.creator_id"),
-                col("run_as").alias("raw_data.run_as"),
-                col("job_parameters").alias("raw_data.job_parameters"),
-                col("tags").alias("raw_data.tags"),
-                col("create_time").alias("raw_data.create_time"),
-                col("delete_time").alias("raw_data.delete_time"),
-                col("change_time").alias("raw_data.change_time"),
-                # Bronze layer columns
-                col("workspace_id"),
-                col("change_time"),
-                current_timestamp().alias("ingestion_timestamp"),
-                lit("system.lakeflow.jobs").alias("source_file"),
-                # Generate record hash
-                sha2(
-                    concat_ws("|",
-                        col("workspace_id"),
-                        col("job_id"),
-                        col("name"),
-                        col("description"),
-                        col("creator_id"),
-                        col("run_as"),
-                        col("job_parameters").cast("string"),
-                        col("tags").cast("string")
-                    ), 256
-                ).alias("record_hash"),
-                lit(False).alias("is_deleted")
-            )
+                # Transform to bronze format with raw_data structure
+                lakeflow_bronze = lakeflow_source.select(
+                    # Create raw_data struct with all the original fields
+                    struct(
+                        col("job_id").alias("job_id"),
+                        col("workspace_id").alias("workspace_id"),
+                        col("name").alias("name"),
+                        # Note: description might not exist in system table
+                        lit(None).cast("string").alias("description"),
+                        col("creator_id").alias("creator_id"),
+                        col("run_as").alias("run_as"),
+                        col("job_parameters").alias("job_parameters"),
+                        col("tags").alias("tags"),
+                        col("create_time").alias("create_time"),
+                        col("delete_time").alias("delete_time"),
+                        col("change_time").alias("change_time")
+                    ).alias("raw_data"),
+                    # Bronze layer columns
+                    col("workspace_id"),
+                    col("change_time"),
+                    current_timestamp().alias("ingestion_timestamp"),
+                    lit("system.lakeflow.jobs").alias("source_file"),
+                    # Generate record hash
+                    sha2(
+                        concat_ws("|",
+                            col("workspace_id"),
+                            col("job_id"),
+                            col("name"),
+                            lit("").alias("description"),  # Use empty string for missing description
+                            col("creator_id"),
+                            col("run_as"),
+                            col("job_parameters").cast("string"),
+                            col("tags").cast("string")
+                        ), 256
+                    ).alias("record_hash"),
+                    lit(False).alias("is_deleted")
+                )
             
             # Write to bronze table
             lakeflow_bronze.write.mode("append").saveAsTable(f"{self.catalog}.bronze.system_lakeflow_jobs")
