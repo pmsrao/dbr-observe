@@ -362,8 +362,8 @@ class DailyObservabilityPipeline:
             # Read from system table and transform to bronze format
             compute_source = self.spark.table("system.compute.clusters")
             
-                # Transform to bronze format with raw_data structure
-                compute_bronze = compute_source.select(
+            # Transform to bronze format with raw_data structure
+            compute_bronze = compute_source.select(
                     # Create raw_data struct with all the original fields
                     struct(
                         col("cluster_id").alias("cluster_id"),
@@ -433,8 +433,8 @@ class DailyObservabilityPipeline:
             # Read from system table and transform to bronze format
             lakeflow_source = self.spark.table("system.lakeflow.jobs")
             
-                # Transform to bronze format with raw_data structure
-                lakeflow_bronze = lakeflow_source.select(
+            # Transform to bronze format with raw_data structure
+            lakeflow_bronze = lakeflow_source.select(
                     # Create raw_data struct with all the original fields
                     struct(
                         col("job_id").alias("job_id"),
