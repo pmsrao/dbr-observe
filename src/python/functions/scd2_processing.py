@@ -48,7 +48,8 @@ class SCD2Processor:
             True if successful, False otherwise
         """
         try:
-            # Flatten the raw_data structure and add computed columns
+            # Create a completely new DataFrame with flattened structure
+            # This ensures no references to the original bronze table structure
             flattened_df = source_df.select(
                 col("workspace_id"),
                 col("change_time"),
@@ -71,6 +72,9 @@ class SCD2Processor:
                 col("raw_data.create_time"),
                 col("raw_data.delete_time")
             )
+            
+            # Force materialization of the flattened DataFrame
+            flattened_df = flattened_df.toDF(*flattened_df.columns)
             
             # Generate record hash for change detection
             source_with_hash = flattened_df.withColumn(
@@ -123,7 +127,7 @@ class SCD2Processor:
                     (col("compute_type").isin([row["compute_type"] for row in changed_records.collect()])) &
                     (col("compute_id").isin([row["compute_id"] for row in changed_records.collect()])) &
                     (col("is_current") == True)
-                ).withColumn("effective_end_ts", col("change_time")) \
+                ).withColumn("effective_end_ts", current_timestamp()) \
                  .withColumn("is_current", lit(False)) \
                  .withColumn("dw_updated_ts", current_timestamp()) \
                  .write.mode("append").saveAsTable(target_table)
@@ -158,7 +162,8 @@ class SCD2Processor:
             True if successful, False otherwise
         """
         try:
-            # Flatten the raw_data structure and add computed columns
+            # Create a completely new DataFrame with flattened structure
+            # This ensures no references to the original bronze table structure
             flattened_df = source_df.select(
                 col("workspace_id"),
                 col("change_time"),
@@ -173,6 +178,9 @@ class SCD2Processor:
                 col("raw_data.create_time"),
                 col("raw_data.delete_time")
             )
+            
+            # Force materialization of the flattened DataFrame
+            flattened_df = flattened_df.toDF(*flattened_df.columns)
             
             # Generate record hash for change detection
             source_with_hash = flattened_df.withColumn(
@@ -218,7 +226,7 @@ class SCD2Processor:
                     (col("workflow_type").isin([row["workflow_type"] for row in changed_records.collect()])) &
                     (col("workflow_id").isin([row["workflow_id"] for row in changed_records.collect()])) &
                     (col("is_current") == True)
-                ).withColumn("effective_end_ts", col("change_time")) \
+                ).withColumn("effective_end_ts", current_timestamp()) \
                  .withColumn("is_current", lit(False)) \
                  .withColumn("dw_updated_ts", current_timestamp()) \
                  .write.mode("append").saveAsTable(target_table)
