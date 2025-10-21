@@ -443,22 +443,24 @@ class BronzeProcessor:
             # Write to bronze table
             warehouse_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_warehouses")
             
-            # Update watermark
-            record_count = warehouse_bronze.count()
-            if record_count > 0:
-                latest_timestamp = warehouse_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
-                if latest_timestamp:
-                    self.watermark_manager.update_watermark(
-                        "system.compute.warehouses",
-                        "obs.bronze.system_compute_warehouses",
-                        "change_time",
-                        latest_timestamp[0]["change_time"].isoformat(),
-                        "SUCCESS",
-                        None,
-                        record_count,
-                        0
-                    )
-                    logger.info(f"Updated watermark for compute warehouses: {latest_timestamp[0]['change_time']}")
+                # Update watermark
+                record_count = warehouse_bronze.count()
+                if record_count > 0:
+                    latest_timestamp = warehouse_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
+                    if latest_timestamp:
+                        # Convert timestamp to string for watermark
+                        watermark_value = str(latest_timestamp[0]["change_time"])
+                        self.watermark_manager.update_watermark(
+                            "system.compute.warehouses",
+                            "obs.bronze.system_compute_warehouses",
+                            "change_time",
+                            watermark_value,
+                            "SUCCESS",
+                            None,
+                            record_count,
+                            0
+                        )
+                        logger.info(f"Updated watermark for compute warehouses: {watermark_value}")
             
             logger.info(f"Compute warehouses ingested successfully - {record_count} records")
             return True
@@ -529,17 +531,19 @@ class BronzeProcessor:
             if record_count > 0:
                 latest_node_type = node_types_bronze.select("node_type").orderBy(col("node_type").desc()).limit(1).collect()
                 if latest_node_type:
+                    # Convert node_type to string for watermark
+                    watermark_value = str(latest_node_type[0]["node_type"])
                     self.watermark_manager.update_watermark(
                         "system.compute.node_types",
                         "obs.bronze.system_compute_node_types",
                         "node_type",
-                        latest_node_type[0]["node_type"],
+                        watermark_value,
                         "SUCCESS",
                         None,
                         record_count,
                         0
                     )
-                    logger.info(f"Updated watermark for compute node types: {latest_node_type[0]['node_type']}")
+                    logger.info(f"Updated watermark for compute node types: {watermark_value}")
             
             logger.info(f"Compute node types ingested successfully - {record_count} records")
             return True
