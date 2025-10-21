@@ -97,7 +97,7 @@ class SCD2Processor:
                         coalesce(col("policy_id"), lit("")),
                         coalesce(col("dbr_version"), lit("")),
                         coalesce(col("cluster_source"), lit("")),
-                        coalesce(col("tags"), lit(""))
+                        coalesce(col("tags").cast("string"), lit(""))
                     ), 256
                 )
             )
@@ -193,10 +193,10 @@ class SCD2Processor:
                         coalesce(col("name"), lit("")),
                         coalesce(col("owner"), lit("")),
                         coalesce(col("run_as"), lit("")),
-                        coalesce(col("settings"), lit("")),
-                        coalesce(col("tags"), lit("")),
-                        coalesce(col("create_time"), lit("")),
-                        coalesce(col("delete_time"), lit(""))
+                        coalesce(col("settings").cast("string"), lit("")),
+                        coalesce(col("tags").cast("string"), lit("")),
+                        coalesce(col("create_time").cast("string"), lit("")),
+                        coalesce(col("delete_time").cast("string"), lit(""))
                     ), 256
                 )
             )
