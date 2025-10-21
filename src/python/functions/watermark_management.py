@@ -10,7 +10,7 @@ Date: December 2024
 
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, current_timestamp, coalesce, lit, when
-from pyspark.sql.types import TimestampType, StringType
+from pyspark.sql.types import TimestampType, StringType, StructType, StructField, IntegerType
 from typing import Optional, Dict, Any
 import logging
 
@@ -33,6 +33,23 @@ class WatermarkManager:
         self.catalog = catalog
         self.schema = schema
         self.watermarks_table = f"{catalog}.{schema}.watermarks"
+        
+        # Define schema for watermark records
+        self.watermark_schema = StructType([
+            StructField("source_table_name", StringType(), False),
+            StructField("target_table_name", StringType(), False),
+            StructField("watermark_column", StringType(), False),
+            StructField("watermark_value", StringType(), False),
+            StructField("last_updated", TimestampType(), False),
+            StructField("processing_status", StringType(), False),
+            StructField("error_message", StringType(), True),
+            StructField("records_processed", IntegerType(), False),
+            StructField("processing_duration_ms", IntegerType(), False),
+            StructField("created_by", StringType(), False),
+            StructField("created_at", TimestampType(), False),
+            StructField("updated_by", StringType(), False),
+            StructField("updated_at", TimestampType(), False)
+        ])
     
     def get_watermark(self, source_table: str, target_table: str, watermark_column: str) -> Optional[str]:
         """
@@ -94,22 +111,22 @@ class WatermarkManager:
             True if successful, False otherwise
         """
         try:
-            # Create new watermark record
+            # Create new watermark record with explicit schema
             new_record = self.spark.createDataFrame([{
                 "source_table_name": source_table,
                 "target_table_name": target_table,
                 "watermark_column": watermark_column,
-                "watermark_value": watermark_value,
+                "watermark_value": str(watermark_value),  # Ensure string type
                 "last_updated": current_timestamp(),
                 "processing_status": processing_status,
                 "error_message": error_message,
-                "records_processed": records_processed,
-                "processing_duration_ms": processing_duration_ms,
+                "records_processed": int(records_processed),  # Ensure integer type
+                "processing_duration_ms": int(processing_duration_ms),  # Ensure integer type
                 "created_by": "pyspark",
                 "created_at": current_timestamp(),
                 "updated_by": "pyspark",
                 "updated_at": current_timestamp()
-            }])
+            }], schema=self.watermark_schema)
             
             # Insert new record
             new_record.write.mode("append").saveAsTable(self.watermarks_table)
