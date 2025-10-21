@@ -12,6 +12,14 @@ from pyspark.sql import SparkSession
 import logging
 
 # Import specialized ingestion classes directly
+import sys
+import os
+
+# Add the current directory to the path to find the bronze package
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from bronze.compute_ingestion import ComputeIngestion
 from bronze.lakeflow_ingestion import LakeflowIngestion
 from bronze.billing_ingestion import BillingIngestion
