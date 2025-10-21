@@ -1,6 +1,6 @@
 """
-Databricks Observability Platform - SCD2 Processing Functions
-============================================================
+Databricks Observability Platform - SCD2 Processing Functions (Fixed)
+====================================================================
 
 PySpark functions for Slowly Changing Dimension Type 2 (SCD2) processing.
 
@@ -130,16 +130,45 @@ class SCD2Processor:
                 ).withColumn("effective_end_ts", current_timestamp()) \
                  .withColumn("is_current", lit(False)) \
                  .withColumn("dw_updated_ts", current_timestamp()) \
-                 .write.mode("append").saveAsTable(target_table)
+                 .write.mode("append").option("mergeSchema", "true").saveAsTable(target_table)
             
-            # Insert new records
-            new_records = source_with_hash.withColumn("effective_start_ts", col("change_time")) \
-                                        .withColumn("effective_end_ts", lit("9999-12-31").cast(TimestampType())) \
-                                        .withColumn("is_current", lit(True)) \
-                                        .withColumn("dw_created_ts", current_timestamp()) \
-                                        .withColumn("dw_updated_ts", current_timestamp())
+            # Insert new records with proper schema matching target table
+            new_records = source_with_hash.select(
+                col("workspace_id"),
+                col("compute_type"),
+                col("compute_id"),
+                col("change_time").alias("effective_start_ts"),
+                lit("9999-12-31").cast(TimestampType()).alias("effective_end_ts"),
+                lit(True).alias("is_current"),
+                col("record_hash"),
+                current_timestamp().alias("dw_created_ts"),
+                current_timestamp().alias("dw_updated_ts"),
+                current_timestamp().alias("processing_timestamp"),
+                col("name"),
+                col("owner"),
+                col("driver_node_type"),
+                col("worker_node_type"),
+                col("worker_count"),
+                col("min_autoscale_workers"),
+                col("max_autoscale_workers"),
+                col("auto_termination_minutes"),
+                col("enable_elastic_disk"),
+                col("data_security_mode"),
+                col("policy_id"),
+                col("dbr_version"),
+                col("cluster_source"),
+                lit(None).cast("string").alias("warehouse_type"),
+                lit(None).cast("string").alias("warehouse_size"),
+                lit(None).cast("string").alias("warehouse_channel"),
+                lit(None).cast("integer").alias("min_clusters"),
+                lit(None).cast("integer").alias("max_clusters"),
+                lit(None).cast("integer").alias("auto_stop_minutes"),
+                col("tags"),
+                col("create_time"),
+                col("delete_time")
+            )
             
-            new_records.write.mode("append").saveAsTable(target_table)
+            new_records.write.mode("append").option("mergeSchema", "true").saveAsTable(target_table)
             
             logger.info(f"SCD2 merge completed for {target_table}")
             return True
@@ -229,16 +258,32 @@ class SCD2Processor:
                 ).withColumn("effective_end_ts", current_timestamp()) \
                  .withColumn("is_current", lit(False)) \
                  .withColumn("dw_updated_ts", current_timestamp()) \
-                 .write.mode("append").saveAsTable(target_table)
+                 .write.mode("append").option("mergeSchema", "true").saveAsTable(target_table)
             
-            # Insert new records
-            new_records = source_with_hash.withColumn("effective_start_ts", col("change_time")) \
-                                        .withColumn("effective_end_ts", lit("9999-12-31").cast(TimestampType())) \
-                                        .withColumn("is_current", lit(True)) \
-                                        .withColumn("dw_created_ts", current_timestamp()) \
-                                        .withColumn("dw_updated_ts", current_timestamp())
+            # Insert new records with proper schema matching target table
+            new_records = source_with_hash.select(
+                col("workspace_id"),
+                col("workflow_type"),
+                col("workflow_id"),
+                col("change_time").alias("effective_start_ts"),
+                lit("9999-12-31").cast(TimestampType()).alias("effective_end_ts"),
+                lit(True).alias("is_current"),
+                col("record_hash"),
+                current_timestamp().alias("dw_created_ts"),
+                current_timestamp().alias("dw_updated_ts"),
+                current_timestamp().alias("processing_timestamp"),
+                col("name"),
+                col("description"),
+                col("owner").alias("creator_id"),
+                col("run_as"),
+                lit(None).cast("string").alias("pipeline_type"),
+                col("settings"),
+                col("tags"),
+                col("create_time"),
+                col("delete_time")
+            )
             
-            new_records.write.mode("append").saveAsTable(target_table)
+            new_records.write.mode("append").option("mergeSchema", "true").saveAsTable(target_table)
             
             logger.info(f"SCD2 merge completed for {target_table}")
             return True
