@@ -7,6 +7,8 @@ Cell 1: Truncate bronze tables
 Cell 2: Reset/Delete watermarks for bronze tables
 """
 
+from pyspark.sql.functions import col
+
 # COMMAND ----------
 
 # MAGIC %md

@@ -181,24 +181,36 @@ class BronzeProcessor:
         """Ingest all billing-related system tables."""
         try:
             logger.info("Starting billing tables ingestion...")
+            print("🔄 DEBUG: Starting billing tables ingestion...")
             
             success = True
             
+            print("🔄 DEBUG: Processing billing usage...")
             if not self._ingest_billing_usage():
                 success = False
+                print("❌ DEBUG: Billing usage ingestion failed")
+            else:
+                print("✅ DEBUG: Billing usage ingestion completed")
                 
+            print("🔄 DEBUG: Processing billing list prices...")
             if not self._ingest_billing_list_prices():
                 success = False
+                print("❌ DEBUG: Billing list prices ingestion failed")
+            else:
+                print("✅ DEBUG: Billing list prices ingestion completed")
             
             if success:
                 logger.info("Billing tables ingestion completed successfully")
+                print("✅ DEBUG: Billing tables ingestion completed successfully")
             else:
                 logger.error("Billing tables ingestion completed with errors")
+                print("❌ DEBUG: Billing tables ingestion completed with errors")
                 
             return success
             
         except Exception as e:
             logger.error(f"Error in billing tables ingestion: {str(e)}")
+            print(f"❌ DEBUG: Error in billing tables ingestion: {str(e)}")
             return False
     
     def _ingest_all_query_tables(self) -> bool:
@@ -566,8 +578,115 @@ class BronzeProcessor:
     
     def _ingest_lakeflow_jobs(self) -> bool:
         """Ingest lakeflow jobs from system table to bronze."""
-        logger.info("Ingesting lakeflow jobs...")
-        return True
+        try:
+            logger.info("Ingesting lakeflow jobs...")
+            print("🔄 DEBUG: Starting lakeflow jobs ingestion...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.lakeflow.jobs",
+                "obs.bronze.system_lakeflow_jobs", 
+                "change_time"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+                print(f"🔄 DEBUG: No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+                print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                lakeflow_source = self.spark.table("system.lakeflow.jobs") \
+                    .filter(col("change_time") > watermark)
+                print(f"🔄 DEBUG: Read from system.lakeflow.jobs, checking record count...")
+                source_count = lakeflow_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
+            except Exception as e:
+                logger.warning(f"System table system.lakeflow.jobs not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.lakeflow.jobs not accessible: {str(e)}")
+                logger.info("Skipping lakeflow jobs ingestion - system table not available")
+                return True
+            
+            if source_count == 0:
+                print("ℹ️ DEBUG: No new records to process after watermark filter")
+                logger.info("No new lakeflow jobs records to process")
+                return True
+            
+            # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
+            lakeflow_bronze = lakeflow_source.select(
+                struct(
+                    col("job_id").alias("job_id"),
+                    col("workspace_id").alias("workspace_id"),
+                    col("job_name").alias("name"),
+                    col("creator_id").alias("creator_id"),
+                    col("description").alias("description"),
+                    col("job_type").alias("job_type"),
+                    col("schedule").alias("schedule"),
+                    col("timeout_seconds").alias("timeout_seconds"),
+                    col("max_concurrent_runs").alias("max_concurrent_runs"),
+                    col("tags").alias("tags"),
+                    col("create_time").alias("create_time"),
+                    col("delete_time").alias("delete_time"),
+                    col("change_time").alias("change_time")
+                ).alias("raw_data"),
+                col("workspace_id"),
+                col("change_time"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.lakeflow.jobs").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("job_id"),
+                        col("workspace_id"),
+                        col("job_name"),
+                        col("creator_id"),
+                        col("description"),
+                        col("job_type"),
+                        col("schedule"),
+                        col("timeout_seconds").cast("string"),
+                        col("max_concurrent_runs").cast("string"),
+                        col("tags").cast("string")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            print("🔄 DEBUG: Writing to bronze table...")
+            # Write to bronze table
+            lakeflow_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_lakeflow_jobs")
+            
+            # Update watermark
+            record_count = lakeflow_bronze.count()
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
+            if record_count > 0:
+                latest_timestamp = lakeflow_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["change_time"])
+                    self.watermark_manager.update_watermark(
+                        "system.lakeflow.jobs",
+                        "obs.bronze.system_lakeflow_jobs",
+                        "change_time",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for lakeflow jobs: {watermark_value}")
+                    print(f"✅ DEBUG: Updated watermark for lakeflow jobs: {watermark_value}")
+            
+            logger.info(f"Lakeflow jobs ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Lakeflow jobs ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting lakeflow jobs: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting lakeflow jobs: {str(e)}")
+            return False
     
     def _ingest_lakeflow_job_tasks(self) -> bool:
         """Ingest lakeflow job tasks from system table to bronze."""
@@ -596,25 +715,525 @@ class BronzeProcessor:
     
     def _ingest_billing_usage(self) -> bool:
         """Ingest billing usage from system table to bronze."""
-        logger.info("Ingesting billing usage...")
-        return True
+        try:
+            logger.info("Ingesting billing usage...")
+            print("🔄 DEBUG: Starting billing usage ingestion...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.billing.usage",
+                "obs.bronze.system_billing_usage", 
+                "usage_date"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+                print(f"🔄 DEBUG: No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+                print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                billing_source = self.spark.table("system.billing.usage") \
+                    .filter(col("usage_date") > watermark)
+                print(f"🔄 DEBUG: Read from system.billing.usage, checking record count...")
+                source_count = billing_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
+            except Exception as e:
+                logger.warning(f"System table system.billing.usage not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.billing.usage not accessible: {str(e)}")
+                logger.info("Skipping billing usage ingestion - system table not available")
+                return True
+            
+            if source_count == 0:
+                print("ℹ️ DEBUG: No new records to process after watermark filter")
+                logger.info("No new billing usage records to process")
+                return True
+            
+            # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
+            billing_bronze = billing_source.select(
+                struct(
+                    col("record_id").alias("record_id"),
+                    col("workspace_id").alias("workspace_id"),
+                    col("sku_name").alias("sku_name"),
+                    col("cloud").alias("cloud"),
+                    col("usage_start_time").alias("usage_start_time"),
+                    col("usage_end_time").alias("usage_end_time"),
+                    col("usage_date").alias("usage_date"),
+                    col("usage_unit").alias("usage_unit"),
+                    col("usage_quantity").alias("usage_quantity"),
+                    col("usage_type").alias("usage_type"),
+                    col("record_type").alias("record_type")
+                ).alias("raw_data"),
+                col("workspace_id"),
+                col("usage_date"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.billing.usage").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("record_id"),
+                        col("workspace_id"),
+                        col("sku_name"),
+                        col("cloud"),
+                        col("usage_start_time").cast("string"),
+                        col("usage_end_time").cast("string"),
+                        col("usage_date").cast("string"),
+                        col("usage_unit"),
+                        col("usage_quantity").cast("string"),
+                        col("usage_type"),
+                        col("record_type")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            print("🔄 DEBUG: Writing to bronze table...")
+            # Write to bronze table
+            billing_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_billing_usage")
+            
+            # Update watermark
+            record_count = billing_bronze.count()
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
+            if record_count > 0:
+                latest_timestamp = billing_bronze.select("usage_date").orderBy(col("usage_date").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["usage_date"])
+                    self.watermark_manager.update_watermark(
+                        "system.billing.usage",
+                        "obs.bronze.system_billing_usage",
+                        "usage_date",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for billing usage: {watermark_value}")
+                    print(f"✅ DEBUG: Updated watermark for billing usage: {watermark_value}")
+            
+            logger.info(f"Billing usage ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Billing usage ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting billing usage: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting billing usage: {str(e)}")
+            return False
     
     def _ingest_billing_list_prices(self) -> bool:
         """Ingest billing list prices from system table to bronze."""
-        logger.info("Ingesting billing list prices...")
-        return True
+        try:
+            logger.info("Ingesting billing list prices...")
+            print("🔄 DEBUG: Starting billing list prices ingestion...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.billing.list_prices",
+                "obs.bronze.system_billing_list_prices", 
+                "effective_date"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+                print(f"🔄 DEBUG: No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+                print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                prices_source = self.spark.table("system.billing.list_prices") \
+                    .filter(col("effective_date") > watermark)
+                print(f"🔄 DEBUG: Read from system.billing.list_prices, checking record count...")
+                source_count = prices_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
+            except Exception as e:
+                logger.warning(f"System table system.billing.list_prices not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.billing.list_prices not accessible: {str(e)}")
+                logger.info("Skipping billing list prices ingestion - system table not available")
+                return True
+            
+            if source_count == 0:
+                print("ℹ️ DEBUG: No new records to process after watermark filter")
+                logger.info("No new billing list prices records to process")
+                return True
+            
+            # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
+            prices_bronze = prices_source.select(
+                struct(
+                    col("sku_name").alias("sku_name"),
+                    col("cloud").alias("cloud"),
+                    col("effective_date").alias("effective_date"),
+                    col("unit_price").alias("unit_price"),
+                    col("currency").alias("currency"),
+                    col("unit").alias("unit")
+                ).alias("raw_data"),
+                col("cloud"),
+                col("effective_date"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.billing.list_prices").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("sku_name"),
+                        col("cloud"),
+                        col("effective_date").cast("string"),
+                        col("unit_price").cast("string"),
+                        col("currency"),
+                        col("unit")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            print("🔄 DEBUG: Writing to bronze table...")
+            # Write to bronze table
+            prices_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_billing_list_prices")
+            
+            # Update watermark
+            record_count = prices_bronze.count()
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
+            if record_count > 0:
+                latest_timestamp = prices_bronze.select("effective_date").orderBy(col("effective_date").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["effective_date"])
+                    self.watermark_manager.update_watermark(
+                        "system.billing.list_prices",
+                        "obs.bronze.system_billing_list_prices",
+                        "effective_date",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for billing list prices: {watermark_value}")
+                    print(f"✅ DEBUG: Updated watermark for billing list prices: {watermark_value}")
+            
+            logger.info(f"Billing list prices ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Billing list prices ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting billing list prices: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting billing list prices: {str(e)}")
+            return False
     
     def _ingest_query_history(self) -> bool:
         """Ingest query history from system table to bronze."""
-        logger.info("Ingesting query history...")
-        return True
+        try:
+            logger.info("Ingesting query history...")
+            print("🔄 DEBUG: Starting query history ingestion...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.query.history",
+                "obs.bronze.system_query_history", 
+                "start_time"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+                print(f"🔄 DEBUG: No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+                print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                query_source = self.spark.table("system.query.history") \
+                    .filter(col("start_time") > watermark)
+                print(f"🔄 DEBUG: Read from system.query.history, checking record count...")
+                source_count = query_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
+            except Exception as e:
+                logger.warning(f"System table system.query.history not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.query.history not accessible: {str(e)}")
+                logger.info("Skipping query history ingestion - system table not available")
+                return True
+            
+            if source_count == 0:
+                print("ℹ️ DEBUG: No new records to process after watermark filter")
+                logger.info("No new query history records to process")
+                return True
+            
+            # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
+            query_bronze = query_source.select(
+                struct(
+                    col("statement_id").alias("statement_id"),
+                    col("workspace_id").alias("workspace_id"),
+                    col("session_id").alias("session_id"),
+                    col("execution_status").alias("execution_status"),
+                    col("start_time").alias("start_time"),
+                    col("end_time").alias("end_time"),
+                    col("duration_ms").alias("duration_ms"),
+                    col("query_type").alias("query_type"),
+                    col("warehouse_id").alias("warehouse_id"),
+                    col("cluster_id").alias("cluster_id")
+                ).alias("raw_data"),
+                col("workspace_id"),
+                col("start_time"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.query.history").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("statement_id"),
+                        col("workspace_id"),
+                        col("session_id"),
+                        col("execution_status"),
+                        col("start_time").cast("string"),
+                        col("end_time").cast("string"),
+                        col("duration_ms").cast("string"),
+                        col("query_type"),
+                        col("warehouse_id"),
+                        col("cluster_id")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            print("🔄 DEBUG: Writing to bronze table...")
+            # Write to bronze table
+            query_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_query_history")
+            
+            # Update watermark
+            record_count = query_bronze.count()
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
+            if record_count > 0:
+                latest_timestamp = query_bronze.select("start_time").orderBy(col("start_time").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["start_time"])
+                    self.watermark_manager.update_watermark(
+                        "system.query.history",
+                        "obs.bronze.system_query_history",
+                        "start_time",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for query history: {watermark_value}")
+                    print(f"✅ DEBUG: Updated watermark for query history: {watermark_value}")
+            
+            logger.info(f"Query history ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Query history ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting query history: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting query history: {str(e)}")
+            return False
     
     def _ingest_audit_log(self) -> bool:
         """Ingest audit log from system table to bronze."""
-        logger.info("Ingesting audit log...")
-        return True
+        try:
+            logger.info("Ingesting audit log...")
+            print("🔄 DEBUG: Starting audit log ingestion...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.access.audit",
+                "obs.bronze.system_access_audit", 
+                "timestamp"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+                print(f"🔄 DEBUG: No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+                print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                audit_source = self.spark.table("system.access.audit") \
+                    .filter(col("timestamp") > watermark)
+                print(f"🔄 DEBUG: Read from system.access.audit, checking record count...")
+                source_count = audit_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
+            except Exception as e:
+                logger.warning(f"System table system.access.audit not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.access.audit not accessible: {str(e)}")
+                logger.info("Skipping audit log ingestion - system table not available")
+                return True
+            
+            if source_count == 0:
+                print("ℹ️ DEBUG: No new records to process after watermark filter")
+                logger.info("No new audit log records to process")
+                return True
+            
+            # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
+            audit_bronze = audit_source.select(
+                struct(
+                    col("timestamp").alias("timestamp"),
+                    col("user_identity").alias("user_identity"),
+                    col("action").alias("action"),
+                    col("resource").alias("resource"),
+                    col("result").alias("result"),
+                    col("workspace_id").alias("workspace_id")
+                ).alias("raw_data"),
+                col("workspace_id"),
+                col("timestamp"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.access.audit").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("timestamp").cast("string"),
+                        col("user_identity"),
+                        col("action"),
+                        col("resource"),
+                        col("result"),
+                        col("workspace_id")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            print("🔄 DEBUG: Writing to bronze table...")
+            # Write to bronze table
+            audit_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_access_audit")
+            
+            # Update watermark
+            record_count = audit_bronze.count()
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
+            if record_count > 0:
+                latest_timestamp = audit_bronze.select("timestamp").orderBy(col("timestamp").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["timestamp"])
+                    self.watermark_manager.update_watermark(
+                        "system.access.audit",
+                        "obs.bronze.system_access_audit",
+                        "timestamp",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for audit log: {watermark_value}")
+                    print(f"✅ DEBUG: Updated watermark for audit log: {watermark_value}")
+            
+            logger.info(f"Audit log ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Audit log ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting audit log: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting audit log: {str(e)}")
+            return False
     
     def _ingest_storage_ops(self) -> bool:
         """Ingest storage operations from system table to bronze."""
-        logger.info("Ingesting storage operations...")
-        return True
+        try:
+            logger.info("Ingesting storage operations...")
+            print("🔄 DEBUG: Starting storage operations ingestion...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.storage.ops",
+                "obs.bronze.system_storage_ops", 
+                "timestamp"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+                print(f"🔄 DEBUG: No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+                print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                storage_source = self.spark.table("system.storage.ops") \
+                    .filter(col("timestamp") > watermark)
+                print(f"🔄 DEBUG: Read from system.storage.ops, checking record count...")
+                source_count = storage_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
+            except Exception as e:
+                logger.warning(f"System table system.storage.ops not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.storage.ops not accessible: {str(e)}")
+                logger.info("Skipping storage operations ingestion - system table not available")
+                return True
+            
+            if source_count == 0:
+                print("ℹ️ DEBUG: No new records to process after watermark filter")
+                logger.info("No new storage operations records to process")
+                return True
+            
+            # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
+            storage_bronze = storage_source.select(
+                struct(
+                    col("timestamp").alias("timestamp"),
+                    col("workspace_id").alias("workspace_id"),
+                    col("operation").alias("operation"),
+                    col("path").alias("path"),
+                    col("size_bytes").alias("size_bytes"),
+                    col("duration_ms").alias("duration_ms"),
+                    col("user_identity").alias("user_identity")
+                ).alias("raw_data"),
+                col("workspace_id"),
+                col("timestamp"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.storage.ops").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("timestamp").cast("string"),
+                        col("workspace_id"),
+                        col("operation"),
+                        col("path"),
+                        col("size_bytes").cast("string"),
+                        col("duration_ms").cast("string"),
+                        col("user_identity")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            print("🔄 DEBUG: Writing to bronze table...")
+            # Write to bronze table
+            storage_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_storage_ops")
+            
+            # Update watermark
+            record_count = storage_bronze.count()
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
+            if record_count > 0:
+                latest_timestamp = storage_bronze.select("timestamp").orderBy(col("timestamp").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["timestamp"])
+                    self.watermark_manager.update_watermark(
+                        "system.storage.ops",
+                        "obs.bronze.system_storage_ops",
+                        "timestamp",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for storage operations: {watermark_value}")
+                    print(f"✅ DEBUG: Updated watermark for storage operations: {watermark_value}")
+            
+            logger.info(f"Storage operations ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Storage operations ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting storage operations: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting storage operations: {str(e)}")
+            return False
