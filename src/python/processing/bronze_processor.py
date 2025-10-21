@@ -407,7 +407,7 @@ class BronzeProcessor:
                     col("warehouse_id").alias("warehouse_id"),
                     col("workspace_id").alias("workspace_id"),
                     col("warehouse_name").alias("name"),
-                    col("owned_by").alias("owner"),
+                    lit(None).cast("string").alias("owner"),  # owned_by doesn't exist
                     col("warehouse_type").alias("warehouse_type"),
                     col("warehouse_size").alias("warehouse_size"),
                     col("warehouse_channel").alias("warehouse_channel"),
@@ -415,7 +415,7 @@ class BronzeProcessor:
                     col("max_clusters").alias("max_clusters"),
                     col("auto_stop_minutes").alias("auto_stop_minutes"),
                     col("tags").alias("tags"),
-                    col("create_time").alias("create_time"),
+                    lit(None).cast("timestamp").alias("create_time"),  # create_time doesn't exist
                     col("delete_time").alias("delete_time"),
                     col("change_time").alias("change_time")
                 ).alias("raw_data"),
@@ -428,7 +428,7 @@ class BronzeProcessor:
                         col("warehouse_id"),
                         col("workspace_id"),
                         col("warehouse_name"),
-                        col("owned_by"),
+                        lit("").alias("owner"),  # Use empty string for missing owned_by
                         col("warehouse_type"),
                         col("warehouse_size"),
                         col("warehouse_channel"),
@@ -476,7 +476,7 @@ class BronzeProcessor:
             watermark = self.watermark_manager.get_watermark(
                 "system.compute.node_types",
                 "obs.bronze.system_compute_node_types", 
-                "cloud"
+                "node_type"
             )
             
             if watermark is None:
@@ -488,7 +488,7 @@ class BronzeProcessor:
             # Read from system table with watermark filter
             try:
                 node_types_source = self.spark.table("system.compute.node_types") \
-                    .filter(col("cloud") > watermark)
+                    .filter(col("node_type") > watermark)
             except Exception as e:
                 logger.warning(f"System table system.compute.node_types not accessible: {str(e)}")
                 logger.info("Skipping compute node types ingestion - system table not available")
@@ -501,18 +501,18 @@ class BronzeProcessor:
                     col("core_count").alias("core_count"),
                     col("memory_mb").alias("memory_mb"),
                     col("gpu_count").alias("gpu_count"),
-                    col("cloud").alias("cloud"),
-                    col("region").alias("region"),
-                    col("availability_zones").alias("availability_zones")
+                    lit(None).cast("string").alias("cloud"),  # cloud doesn't exist
+                    lit(None).cast("string").alias("region"),  # region doesn't exist
+                    lit(None).cast("array<string>").alias("availability_zones")  # availability_zones doesn't exist
                 ).alias("raw_data"),
-                col("cloud"),
+                col("node_type"),
                 current_timestamp().alias("ingestion_timestamp"),
                 lit("system.compute.node_types").alias("source_file"),
                 sha2(
                     concat_ws("|",
                         col("node_type"),
-                        col("cloud"),
-                        col("region"),
+                        lit("").alias("cloud"),  # Use empty string for missing cloud
+                        lit("").alias("region"),  # Use empty string for missing region
                         col("core_count").cast("string"),
                         col("memory_mb").cast("string"),
                         col("gpu_count").cast("string")
@@ -527,19 +527,19 @@ class BronzeProcessor:
             # Update watermark
             record_count = node_types_bronze.count()
             if record_count > 0:
-                latest_timestamp = node_types_bronze.select("cloud").orderBy(col("cloud").desc()).limit(1).collect()
-                if latest_timestamp:
+                latest_node_type = node_types_bronze.select("node_type").orderBy(col("node_type").desc()).limit(1).collect()
+                if latest_node_type:
                     self.watermark_manager.update_watermark(
                         "system.compute.node_types",
                         "obs.bronze.system_compute_node_types",
-                        "cloud",
-                        latest_timestamp[0]["cloud"],
+                        "node_type",
+                        latest_node_type[0]["node_type"],
                         "SUCCESS",
                         None,
                         record_count,
                         0
                     )
-                    logger.info(f"Updated watermark for compute node types: {latest_timestamp[0]['cloud']}")
+                    logger.info(f"Updated watermark for compute node types: {latest_node_type[0]['node_type']}")
             
             logger.info(f"Compute node types ingested successfully - {record_count} records")
             return True
