@@ -764,7 +764,7 @@ class BronzeProcessor:
                     col("usage_end_time").alias("usage_end_time"),
                     col("usage_date").alias("usage_date"),
                     col("usage_unit").alias("usage_unit"),
-                    col("usage_quantity").alias("usage_quantity"),
+                    col("usage_quantity").cast("decimal(38,18)").alias("usage_quantity"),  # Fix decimal precision
                     col("usage_type").alias("usage_type"),
                     col("record_type").alias("record_type")
                 ).alias("raw_data"),
@@ -1164,8 +1164,12 @@ class BronzeProcessor:
                 source_count = storage_source.count()
                 print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
             except Exception as e:
-                logger.warning(f"System table system.storage.ops not accessible: {str(e)}")
-                print(f"❌ DEBUG: System table system.storage.ops not accessible: {str(e)}")
+                if "TABLE_OR_VIEW_NOT_FOUND" in str(e):
+                    logger.info("System table system.storage.ops does not exist in this workspace")
+                    print(f"ℹ️ DEBUG: System table system.storage.ops does not exist in this workspace")
+                else:
+                    logger.warning(f"System table system.storage.ops not accessible: {str(e)}")
+                    print(f"❌ DEBUG: System table system.storage.ops not accessible: {str(e)}")
                 logger.info("Skipping storage operations ingestion - system table not available")
                 return True
             
