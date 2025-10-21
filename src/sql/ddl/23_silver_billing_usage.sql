@@ -53,8 +53,6 @@ CREATE TABLE IF NOT EXISTS obs.silver.billing_usage (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for billing usage with flexible metadata handling and upsert capabilities'
-LOCATION 's3://company-databricks-obs/silver/billing_usage/'
 PARTITIONED BY (workspace_id, usage_date);
 
 -- =============================================================================
@@ -81,8 +79,6 @@ CREATE TABLE IF NOT EXISTS obs.silver.billing_list_prices (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for billing list prices with effective date tracking'
-LOCATION 's3://company-databricks-obs/silver/billing_list_prices/'
 PARTITIONED BY (cloud, effective_date);
 
 -- =============================================================================
@@ -107,10 +103,16 @@ ALTER TABLE obs.silver.billing_list_prices SET TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported'
 );
 
--- Add primary key constraints
+-- Add primary key constraints (idempotent)
+ALTER TABLE obs.silver.billing_usage 
+DROP CONSTRAINT IF EXISTS pk_billing_usage;
+
 ALTER TABLE obs.silver.billing_usage 
 ADD CONSTRAINT pk_billing_usage 
 PRIMARY KEY (record_id);
+
+ALTER TABLE obs.silver.billing_list_prices 
+DROP CONSTRAINT IF EXISTS pk_billing_list_prices;
 
 ALTER TABLE obs.silver.billing_list_prices 
 ADD CONSTRAINT pk_billing_list_prices 
@@ -122,31 +124,7 @@ PRIMARY KEY (sku_name, cloud, effective_date);
 
 -- Example upsert pattern for billing usage
 -- This will be implemented in the processing logic
-/*
-MERGE INTO obs.silver.billing_usage AS target
-USING (
-    SELECT 
-        record_id,  -- Unique identifier from system.billing.usage
-        workspace_id,
-        sku_name,
-        cloud,
-        usage_start_time,
-        usage_end_time,
-        usage_quantity,
-        -- ... other fields
-        processing_timestamp
-    FROM obs.bronze.system_billing_usage
-    WHERE processing_timestamp >= {watermark}
-) AS source
-ON target.record_id = source.record_id
-WHEN MATCHED THEN 
-    UPDATE SET 
-        usage_quantity = source.usage_quantity,
-        processing_timestamp = source.processing_timestamp
-WHEN NOT MATCHED THEN 
-    INSERT (record_id, workspace_id, sku_name, cloud, usage_start_time, usage_end_time, usage_quantity, processing_timestamp)
-    VALUES (source.record_id, source.workspace_id, source.sku_name, source.cloud, source.usage_start_time, source.usage_end_time, source.usage_quantity, source.processing_timestamp);
-*/
+-- Uses MERGE statement with record_id as unique identifier for upserts
 
 -- =============================================================================
 -- 5. VERIFICATION
@@ -170,8 +148,8 @@ SHOW TBLPROPERTIES obs.silver.billing_list_prices;
 -- 3. 06_silver_node_usage.sql - Create node usage table
 -- 4. Staging views for data harmonization
 
-PRINT 'Silver billing tables created successfully!';
-PRINT 'Tables: billing_usage, billing_list_prices';
-PRINT 'Upsert pattern implemented using record_id as primary key';
-PRINT 'Flexible metadata handling with MAP<STRING, STRING> structure';
-PRINT 'Ready for query history table creation.';
+SELECT 'Silver billing tables created successfully!' as message;
+SELECT 'Tables: billing_usage, billing_list_prices' as message;
+SELECT 'Upsert pattern implemented using record_id as primary key' as message;
+SELECT 'Flexible metadata handling with MAP<STRING, STRING> structure' as message;
+SELECT 'Ready for query history table creation.' as message;

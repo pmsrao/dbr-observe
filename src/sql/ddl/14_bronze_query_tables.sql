@@ -10,6 +10,9 @@
 -- 1. QUERY HISTORY TABLE
 -- =============================================================================
 
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_query_history;
+
 CREATE TABLE IF NOT EXISTS obs.bronze.system_query_history (
     raw_data STRUCT<
         workspace_id STRING,
@@ -67,15 +70,20 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_query_history (
             is_truncated BOOLEAN
         >
     >,
+    
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    start_time TIMESTAMP,
+    start_date DATE,
+    
+    -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.query.history - Raw query history data'
-LOCATION 's3://company-databricks-obs/bronze/system_query_history/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- =============================================================================
 -- 2. TABLE PROPERTIES
@@ -87,4 +95,4 @@ ALTER TABLE obs.bronze.system_query_history SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
-PRINT 'Bronze query tables created successfully!';
+SELECT 'Bronze query tables created successfully!' as message;

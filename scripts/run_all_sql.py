@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# SQL files in execution order
+# SQL files in execution order (SETUP ONLY - excludes processing files 44, 45, 46)
 SQL_FILES = [
     "src/sql/ddl/01_catalog_schemas.sql",
     "src/sql/ddl/02_permissions_setup.sql", 
@@ -50,9 +50,15 @@ SQL_FILES = [
     "src/sql/ddl/32_gold_fact_tables.sql",
     "src/sql/transformations/41_staging_views.sql",
     "src/sql/transformations/42_scd2_functions.sql",
-    "src/sql/transformations/43_tag_extraction_functions.sql",
+    "src/sql/transformations/43_tag_extraction_functions.sql"
+    # Note: Files 44, 45, 46 are processing files (INSERT/UPDATE/MERGE) 
+    # and should be run as part of daily data processing pipeline, not setup
+]
+
+# Processing files (run daily during data ingestion)
+PROCESSING_FILES = [
     "src/sql/transformations/44_bronze_to_silver_processing.sql",
-    "src/sql/transformations/45_silver_to_gold_processing.sql",
+    "src/sql/transformations/45_silver_to_gold_processing.sql", 
     "src/sql/transformations/46_metrics_calculation.sql"
 ]
 
@@ -151,7 +157,25 @@ class SQLSetupRunner:
                 # Split SQL content by semicolons and execute each statement
                 statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
                 
-                for i, statement in enumerate(statements):
+                # Filter out comments-only statements
+                executable_statements = []
+                for stmt in statements:
+                    # Remove comments and check if there's actual SQL
+                    lines = stmt.split('\n')
+                    sql_lines = []
+                    for line in lines:
+                        line = line.strip()
+                        if line and not line.startswith('--'):
+                            sql_lines.append(line)
+                    
+                    if sql_lines:  # Only add if there are non-comment lines
+                        executable_statements.append(stmt)
+                
+                if not executable_statements:
+                    logger.info(f"⚠️  No executable statements found in {file_path} (only comments)")
+                    return True
+                
+                for i, statement in enumerate(executable_statements):
                     if not statement:
                         continue
                     
@@ -299,7 +323,7 @@ def main():
     """Main entry point."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Run SQL setup files for Databricks Observability Platform")
+    parser = argparse.ArgumentParser(description="Run SQL SETUP files for Databricks Observability Platform (excludes processing files 44-46)")
     parser.add_argument("--start-from", help="File to start from (resume point)")
     parser.add_argument("--retry-failed", action="store_true", help="Retry only failed files")
     parser.add_argument("--no-skip", action="store_true", help="Don't skip completed files")

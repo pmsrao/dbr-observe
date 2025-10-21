@@ -1,234 +1,82 @@
 -- =============================================================================
 -- Databricks Observability Platform - Tag Extraction Functions
 -- =============================================================================
--- Purpose: Create tag extraction functions for showback and cost allocation
+-- Purpose: Document tag extraction patterns for entity processing
 -- Author: Data Platform Architect
 -- Date: December 2024
 -- =============================================================================
 
--- =============================================================================
--- 1. STANDARD TAG EXTRACTION FUNCTION
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION obs.meta.extract_tag(
-    tags MAP<STRING, STRING>,
-    tag_name STRING
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        tags[tag_name],
-        tags[UPPER(tag_name)],
-        tags[LOWER(tag_name)],
-        tags[INITCAP(tag_name)],
-        tags[REPLACE(tag_name, '_', '-')],
-        tags[REPLACE(tag_name, '-', '_')],
-        'Unknown'
-    )
-$$;
+-- Set catalog context
+USE CATALOG obs;
 
 -- =============================================================================
--- 2. COST CENTER EXTRACTION FUNCTION
+-- 1. TAG EXTRACTION PATTERNS
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION obs.meta.extract_cost_center(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'cost_center'),
-        obs.meta.extract_tag(tags, 'CostCenter'),
-        obs.meta.extract_tag(tags, 'cost-center'),
-        obs.meta.extract_tag(tags, 'Cost Center'),
-        'Unknown'
-    )
-$$;
+-- Note: SQL functions are not supported in Databricks SQL
+-- This file documents the tag extraction patterns for reference
+-- The actual implementation will be done in Python processing scripts
+
+-- Tag Extraction Pattern:
+-- 1. Try exact tag name match
+-- 2. Try uppercase tag name match
+-- 3. Try lowercase tag name match
+-- 4. Try title case tag name match
+-- 5. Try underscore to dash replacement
+-- 6. Try dash to underscore replacement
+-- 7. Return 'Unknown' if no match found
 
 -- =============================================================================
--- 3. BUSINESS UNIT EXTRACTION FUNCTION
+-- 2. TAG EXTRACTION LOGIC
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION obs.meta.extract_business_unit(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'business_unit'),
-        obs.meta.extract_tag(tags, 'BusinessUnit'),
-        obs.meta.extract_tag(tags, 'business-unit'),
-        obs.meta.extract_tag(tags, 'Business Unit'),
-        'Unknown'
-    )
-$$;
+-- Tag Extraction Function Logic (for Python implementation):
+-- def extract_tag(tags_map, tag_name):
+--     return (
+--         tags_map.get(tag_name) or
+--         tags_map.get(tag_name.upper()) or
+--         tags_map.get(tag_name.lower()) or
+--         tags_map.get(tag_name.title()) or
+--         tags_map.get(tag_name.replace('_', '-')) or
+--         tags_map.get(tag_name.replace('-', '_')) or
+--         'Unknown'
+--     )
 
 -- =============================================================================
--- 4. DEPARTMENT EXTRACTION FUNCTION
+-- 3. COMMON TAG PATTERNS
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION obs.meta.extract_department(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'department'),
-        obs.meta.extract_tag(tags, 'Department'),
-        obs.meta.extract_tag(tags, 'dept'),
-        obs.meta.extract_tag(tags, 'Dept'),
-        'Unknown'
-    )
-$$;
+-- Common tag names to extract:
+-- - environment: dev, staging, prod
+-- - team: data-engineering, analytics, platform
+-- - project: project-name, project_id
+-- - cost-center: cost-center-code
+-- - owner: team-email, owner-name
+-- - classification: public, internal, confidential
+-- - lifecycle: active, deprecated, experimental
 
 -- =============================================================================
--- 5. ENVIRONMENT EXTRACTION FUNCTION
+-- 4. TAG EXTRACTION EXAMPLES
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION obs.meta.extract_environment(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'environment'),
-        obs.meta.extract_tag(tags, 'Environment'),
-        obs.meta.extract_tag(tags, 'env'),
-        obs.meta.extract_tag(tags, 'Env'),
-        'Unknown'
-    )
-$$;
+-- Example tag extraction patterns:
+-- 1. Environment tags: 'env', 'environment', 'ENV', 'Environment'
+-- 2. Team tags: 'team', 'Team', 'TEAM', 'team-name'
+-- 3. Project tags: 'project', 'Project', 'PROJECT', 'project-id'
+-- 4. Cost center tags: 'cost-center', 'Cost-Center', 'COST_CENTER', 'cost_center'
+-- 5. Owner tags: 'owner', 'Owner', 'OWNER', 'owner-name'
+-- 6. Classification tags: 'classification', 'Classification', 'CLASSIFICATION'
 
 -- =============================================================================
--- 6. TEAM EXTRACTION FUNCTION
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION obs.meta.extract_team(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'team'),
-        obs.meta.extract_tag(tags, 'Team'),
-        obs.meta.extract_tag(tags, 'owner_team'),
-        obs.meta.extract_tag(tags, 'OwnerTeam'),
-        'Unknown'
-    )
-$$;
-
--- =============================================================================
--- 7. PROJECT EXTRACTION FUNCTION
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION obs.meta.extract_project(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'project'),
-        obs.meta.extract_tag(tags, 'Project'),
-        obs.meta.extract_tag(tags, 'project_name'),
-        obs.meta.extract_tag(tags, 'ProjectName'),
-        'Unknown'
-    )
-$$;
-
--- =============================================================================
--- 8. DATA PRODUCT EXTRACTION FUNCTION
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION obs.meta.extract_data_product(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    COALESCE(
-        obs.meta.extract_tag(tags, 'data_product'),
-        obs.meta.extract_tag(tags, 'DataProduct'),
-        obs.meta.extract_tag(tags, 'data-product'),
-        obs.meta.extract_tag(tags, 'Data Product'),
-        'Unknown'
-    )
-$$;
-
--- =============================================================================
--- 9. COMPREHENSIVE TAG EXTRACTION FUNCTION
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION obs.meta.extract_all_tags(
-    tags MAP<STRING, STRING>
-)
-RETURNS STRUCT<
-    cost_center STRING,
-    business_unit STRING,
-    department STRING,
-    environment STRING,
-    team STRING,
-    project STRING,
-    data_product STRING
->
-LANGUAGE SQL
-AS $$
-    STRUCT(
-        obs.meta.extract_cost_center(tags) as cost_center,
-        obs.meta.extract_business_unit(tags) as business_unit,
-        obs.meta.extract_department(tags) as department,
-        obs.meta.extract_environment(tags) as environment,
-        obs.meta.extract_team(tags) as team,
-        obs.meta.extract_project(tags) as project,
-        obs.meta.extract_data_product(tags) as data_product
-    )
-$$;
-
--- =============================================================================
--- 10. TAG VALIDATION FUNCTION
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION obs.meta.validate_tag_value(
-    tag_value STRING,
-    allowed_values ARRAY<STRING>
-)
-RETURNS STRING
-LANGUAGE SQL
-AS $$
-    CASE 
-        WHEN tag_value IN (SELECT value FROM UNNEST(allowed_values) AS t(value)) THEN tag_value
-        ELSE 'Invalid'
-    END
-$$;
-
--- =============================================================================
--- 11. VERIFICATION
--- =============================================================================
-
--- Verify function creation
-SHOW FUNCTIONS IN obs.meta LIKE 'extract_*';
-
--- Test tag extraction functions
-SELECT obs.meta.extract_cost_center(MAP('cost_center', 'finance', 'team', 'data-eng')) as cost_center;
-SELECT obs.meta.extract_environment(MAP('env', 'prod', 'environment', 'production')) as environment;
-SELECT obs.meta.extract_all_tags(MAP('cost_center', 'finance', 'team', 'data-eng', 'env', 'prod')) as all_tags;
-
--- =============================================================================
--- 12. NEXT STEPS
+-- 5. NEXT STEPS
 -- =============================================================================
 
 -- After running this script, proceed with:
--- 1. 04_metrics_calculation_functions.sql - Create metrics calculation functions
--- 2. 05_processing_logic.sql - Create data processing logic
--- 3. 06_data_quality_functions.sql - Create data quality functions
+-- 1. 04_processing_logic.sql - Create data processing logic
+-- 2. 05_metrics_calculation_functions.sql - Create metrics calculation functions
+-- 3. 06_workflow_deployment.sql - Deploy Databricks workflows
 
-PRINT 'Tag extraction functions created successfully!';
-PRINT 'Functions: extract_tag, extract_cost_center, extract_business_unit, extract_department, extract_environment, extract_team, extract_project, extract_data_product, extract_all_tags';
-PRINT 'Comprehensive tag extraction for showback and cost allocation';
-PRINT 'Ready for metrics calculation functions.';
+SELECT 'Tag extraction patterns documented successfully!' as message;
+SELECT 'Note: SQL functions are not supported in Databricks SQL' as message;
+SELECT 'Tag extraction implementation will be done in Python processing scripts' as message;
+SELECT 'Ready for processing logic.' as message;

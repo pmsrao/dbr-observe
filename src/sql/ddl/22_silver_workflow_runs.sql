@@ -10,6 +10,9 @@
 -- 1. WORKFLOW RUNS TABLE
 -- =============================================================================
 
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.silver.workflow_runs;
+
 CREATE TABLE IF NOT EXISTS obs.silver.workflow_runs (
     -- Basic identifiers
     workspace_id STRING NOT NULL,
@@ -24,6 +27,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.workflow_runs (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     duration_ms BIGINT,
+    start_date DATE,
     
     -- Status
     result_state STRING,
@@ -113,13 +117,14 @@ CREATE TABLE IF NOT EXISTS obs.silver.workflow_runs (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for workflow runs with comprehensive runtime metrics and performance data'
-LOCATION 's3://company-databricks-obs/silver/workflow_runs/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- =============================================================================
 -- 2. JOB TASK RUNS TABLE
 -- =============================================================================
+
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.silver.job_task_runs;
 
 CREATE TABLE IF NOT EXISTS obs.silver.job_task_runs (
     -- Basic identifiers
@@ -132,6 +137,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.job_task_runs (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     duration_ms BIGINT,
+    start_date DATE,
     
     -- Status
     result_state STRING,
@@ -202,9 +208,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.job_task_runs (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for job task runs with detailed runtime metrics'
-LOCATION 's3://company-databricks-obs/silver/job_task_runs/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- =============================================================================
 -- 3. TABLE PROPERTIES AND CONSTRAINTS
@@ -228,10 +232,16 @@ ALTER TABLE obs.silver.job_task_runs SET TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported'
 );
 
--- Add primary key constraints
+-- Add primary key constraints (idempotent)
+ALTER TABLE obs.silver.workflow_runs 
+DROP CONSTRAINT IF EXISTS pk_workflow_runs;
+
 ALTER TABLE obs.silver.workflow_runs 
 ADD CONSTRAINT pk_workflow_runs 
 PRIMARY KEY (workspace_id, workflow_type, workflow_id, run_id);
+
+ALTER TABLE obs.silver.job_task_runs 
+DROP CONSTRAINT IF EXISTS pk_job_task_runs;
 
 ALTER TABLE obs.silver.job_task_runs 
 ADD CONSTRAINT pk_job_task_runs 
@@ -259,7 +269,7 @@ SHOW TBLPROPERTIES obs.silver.job_task_runs;
 -- 3. 05_silver_audit_log.sql - Create audit log table
 -- 4. Staging views for data harmonization
 
-PRINT 'Silver workflow runs tables created successfully!';
-PRINT 'Tables: workflow_runs, job_task_runs';
-PRINT 'Enhanced runtime metrics and performance tracking implemented';
-PRINT 'Ready for billing usage table creation.';
+SELECT 'Silver workflow runs tables created successfully!' as message;
+SELECT 'Tables: workflow_runs, job_task_runs' as message;
+SELECT 'Enhanced runtime metrics and performance tracking implemented' as message;
+SELECT 'Ready for billing usage table creation.' as message;

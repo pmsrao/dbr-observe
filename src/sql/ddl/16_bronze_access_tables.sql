@@ -31,15 +31,20 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_access_audit (
         request_params MAP<STRING, STRING>,
         response STRING
     >,
+    
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    event_time TIMESTAMP,
+    event_date DATE,
+    
+    -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.access.audit - Raw access audit data'
-LOCATION 's3://company-databricks-obs/bronze/system_access_audit/'
-PARTITIONED BY (workspace_id, date(event_time));
+PARTITIONED BY (workspace_id, event_date);
 
 -- =============================================================================
 -- 2. TABLE PROPERTIES
@@ -51,4 +56,4 @@ ALTER TABLE obs.bronze.system_access_audit SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
-PRINT 'Bronze access tables created successfully!';
+SELECT 'Bronze access tables created successfully!' as message;

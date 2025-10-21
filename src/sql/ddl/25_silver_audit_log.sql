@@ -41,9 +41,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.audit_log (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for access audit log with governance and security tracking'
-LOCATION 's3://company-databricks-obs/silver/audit_log/'
-PARTITIONED BY (workspace_id, date(event_time));
+PARTITIONED BY (workspace_id, event_time);
 
 -- Set properties
 ALTER TABLE obs.silver.audit_log SET TBLPROPERTIES (
@@ -52,9 +50,12 @@ ALTER TABLE obs.silver.audit_log SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
--- Add primary key constraint
+-- Add primary key constraint (idempotent)
+ALTER TABLE obs.silver.audit_log 
+DROP CONSTRAINT IF EXISTS pk_audit_log;
+
 ALTER TABLE obs.silver.audit_log 
 ADD CONSTRAINT pk_audit_log 
 PRIMARY KEY (workspace_id, event_id);
 
-PRINT 'Silver audit log table created successfully!';
+SELECT 'Silver audit log table created successfully!' as message;

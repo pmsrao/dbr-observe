@@ -1,0 +1,29 @@
+{
+  "completed_files": [
+    "src/sql/ddl/01_catalog_schemas.sql",
+    "src/sql/ddl/02_permissions_setup.sql",
+    "src/sql/ddl/03_watermark_table.sql",
+    "src/sql/ddl/11_bronze_billing_tables.sql",
+    "src/sql/ddl/12_bronze_compute_tables.sql",
+    "src/sql/ddl/13_bronze_lakeflow_tables.sql",
+    "src/sql/ddl/14_bronze_query_tables.sql",
+    "src/sql/ddl/15_bronze_storage_tables.sql",
+    "src/sql/ddl/16_bronze_access_tables.sql",
+    "src/sql/ddl/21_silver_entities.sql",
+    "src/sql/ddl/22_silver_workflow_runs.sql",
+    "src/sql/ddl/23_silver_billing_usage.sql",
+    "src/sql/ddl/24_silver_query_history.sql",
+    "src/sql/ddl/25_silver_audit_log.sql",
+    "src/sql/ddl/26_silver_node_usage.sql",
+    "src/sql/ddl/31_gold_dimensions.sql",
+    "src/sql/ddl/32_gold_fact_tables.sql",
+    "src/sql/transformations/41_staging_views.sql",
+    "src/sql/transformations/42_scd2_functions.sql",
+    "src/sql/transformations/43_tag_extraction_functions.sql",
+    "src/sql/transformations/44_bronze_to_silver_processing.sql",
+    "src/sql/transformations/45_silver_to_gold_processing.sql"
+  ],
+  "failed_files": [],
+  "current_file": "src/sql/transformations/46_metrics_calculation.sql",
+  "start_time": "2025-10-20T20:04:03.411595"
+}

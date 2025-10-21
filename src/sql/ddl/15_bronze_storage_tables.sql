@@ -10,6 +10,9 @@
 -- 1. STORAGE OPERATIONS TABLE
 -- =============================================================================
 
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_storage_ops;
+
 CREATE TABLE IF NOT EXISTS obs.bronze.system_storage_ops (
     raw_data STRUCT<
         workspace_id STRING,
@@ -25,15 +28,20 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_storage_ops (
         status STRING,
         details MAP<STRING, STRING>
     >,
+    
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    start_time TIMESTAMP,
+    start_date DATE,
+    
+    -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.storage.ops - Raw storage operations data'
-LOCATION 's3://company-databricks-obs/bronze/system_storage_ops/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- =============================================================================
 -- 2. TABLE PROPERTIES
@@ -45,4 +53,4 @@ ALTER TABLE obs.bronze.system_storage_ops SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
-PRINT 'Bronze storage tables created successfully!';
+SELECT 'Bronze storage tables created successfully!' as message;

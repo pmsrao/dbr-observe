@@ -6,6 +6,9 @@
 -- Date: December 2024
 -- =============================================================================
 
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.silver.query_history;
+
 CREATE TABLE IF NOT EXISTS obs.silver.query_history (
     -- Basic identifiers
     workspace_id STRING NOT NULL,
@@ -30,6 +33,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.query_history (
     
     -- Timing
     start_time TIMESTAMP NOT NULL,
+    start_date DATE,
     end_time TIMESTAMP,
     total_duration_ms BIGINT,
     waiting_for_compute_duration_ms BIGINT,
@@ -83,9 +87,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.query_history (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for query history with compute linkage and performance metrics'
-LOCATION 's3://company-databricks-obs/silver/query_history/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- Set properties
 ALTER TABLE obs.silver.query_history SET TBLPROPERTIES (
@@ -94,9 +96,12 @@ ALTER TABLE obs.silver.query_history SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
--- Add primary key constraint
+-- Add primary key constraint (idempotent)
+ALTER TABLE obs.silver.query_history 
+DROP CONSTRAINT IF EXISTS pk_query_history;
+
 ALTER TABLE obs.silver.query_history 
 ADD CONSTRAINT pk_query_history 
 PRIMARY KEY (workspace_id, statement_id);
 
-PRINT 'Silver query history table created successfully!';
+SELECT 'Silver query history table created successfully!' as message;

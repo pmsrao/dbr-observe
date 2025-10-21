@@ -21,7 +21,6 @@ This platform implements a modern data lakehouse architecture with three layers:
 
 > **📖 For detailed architecture information, see [Architecture & Design](docs/architecture.md)**
 
-madhu_obs_pat - 
 ## 📁 Project Structure
 
 ```
@@ -53,7 +52,14 @@ dbr-observe/
 │   │       ├── 44_bronze_to_silver_processing.sql # Bronze to Silver
 │   │       ├── 45_silver_to_gold_processing.sql   # Silver to Gold
 │   │       └── 46_metrics_calculation.sql         # Metrics calculation
-│   ├── jobs/                       # Databricks job definitions
+│   ├── python/                     # PySpark functions and processing
+│   │   ├── functions/              # PySpark function modules
+│   │   │   ├── watermark_management.py    # Watermark management functions
+│   │   │   ├── scd2_processing.py        # SCD2 processing functions
+│   │   │   └── tag_extraction.py         # Tag extraction functions
+│   │   └── processing/             # Daily processing pipeline
+│   │       └── daily_observability_pipeline.py  # Main daily pipeline
+│   ├── jobs/                       # Databricks job definitions (legacy)
 │   │   ├── 01_daily_observability_pipeline.py  # Main daily pipeline
 │   │   └── 02_watermark_management.py          # Watermark management
 │   ├── libraries/                  # Reusable code modules
@@ -75,49 +81,66 @@ dbr-observe/
 
 ## 🚀 Quick Start
 
-### 1. Environment Setup
+### Phase 1: Initial Setup (Run Once)
+
+#### 1. Environment Setup
 ```bash
-# Run setup scripts in order
-src/sql/ddl/01_catalog_schemas.sql
-src/sql/ddl/02_permissions_setup.sql
-src/sql/ddl/03_watermark_table.sql
+# Set environment variables
+export DATABRICKS_HOST="https://your-workspace.cloud.databricks.com"
+export DATABRICKS_TOKEN="your-access-token"
+export DATABRICKS_WAREHOUSE_HTTP_PATH="/sql/1.0/warehouses/your-warehouse-id"
 ```
 
-### 2. Table Creation
+#### 2. Run Complete Setup
 ```bash
-# Create bronze tables (11-16)
-src/sql/ddl/11_bronze_billing_tables.sql
-src/sql/ddl/12_bronze_compute_tables.sql
-src/sql/ddl/13_bronze_lakeflow_tables.sql
-src/sql/ddl/14_bronze_query_tables.sql
-src/sql/ddl/15_bronze_storage_tables.sql
-src/sql/ddl/16_bronze_access_tables.sql
+# Run all setup files (1-43, excludes processing files 44-46)
+./scripts/run_sql_setup.sh
 
-# Create silver tables (21-26)
-src/sql/ddl/21_silver_entities.sql
-src/sql/ddl/22_silver_workflow_runs.sql
-src/sql/ddl/23_silver_billing_usage.sql
-src/sql/ddl/24_silver_query_history.sql
-src/sql/ddl/25_silver_audit_log.sql
-src/sql/ddl/26_silver_node_usage.sql
-
-# Create gold tables (31-32)
-src/sql/ddl/31_gold_dimensions.sql
-src/sql/ddl/32_gold_fact_tables.sql
+# Or run with Python connector
+python scripts/run_all_sql.py
 ```
 
-### 3. Staging and Functions
-```bash
-# Create staging views and functions (41-43)
-src/sql/transformations/41_staging_views.sql
-src/sql/transformations/42_scd2_functions.sql
-src/sql/transformations/43_tag_extraction_functions.sql
+#### 3. Setup Files Included
+- ✅ **Catalog & Schemas**: `01_catalog_schemas.sql`
+- ✅ **Permissions**: `02_permissions_setup.sql`
+- ✅ **Watermark Management**: `03_watermark_table.sql`
+- ✅ **Bronze Tables**: `11_bronze_billing_tables.sql` through `16_bronze_access_tables.sql`
+- ✅ **Silver Tables**: `21_silver_entities.sql` through `26_silver_node_usage.sql`
+- ✅ **Gold Tables**: `31_gold_dimensions.sql` through `32_gold_fact_tables.sql`
+- ✅ **Staging Views**: `41_staging_views.sql`
+- ✅ **Function Documentation**: `42_scd2_functions.sql`, `43_tag_extraction_functions.sql`
+
+### Phase 2: Daily Processing (Run Daily)
+
+#### 1. PySpark Functions Available
+- ✅ **Watermark Management**: `src/python/functions/watermark_management.py`
+- ✅ **SCD2 Processing**: `src/python/functions/scd2_processing.py`
+- ✅ **Tag Extraction**: `src/python/functions/tag_extraction.py`
+- ✅ **Daily Pipeline**: `src/python/processing/daily_observability_pipeline.py`
+
+#### 2. Daily Processing Options
+
+**Option A: Complete Daily Pipeline**
+```python
+from src.python.processing.daily_observability_pipeline import DailyObservabilityPipeline
+from pyspark.sql import SparkSession
+
+# Initialize Spark
+spark = SparkSession.builder.appName("Daily Observability Pipeline").getOrCreate()
+
+# Run complete pipeline
+pipeline = DailyObservabilityPipeline(spark)
+success = pipeline.run_daily_pipeline()
 ```
 
-### 4. Daily Pipeline Setup
-```bash
-# Deploy and schedule the daily pipeline
-src/jobs/01_daily_observability_pipeline.py
+**Option B: Individual Functions**
+```python
+from src.python.functions.watermark_management import get_watermark, update_watermark
+from src.python.functions.scd2_processing import merge_compute_entities_scd2
+from src.python.functions.tag_extraction import extract_standard_tags
+
+# Use individual functions as needed
+watermark = get_watermark(spark, "system.compute.clusters", "obs.silver.compute_entities", "change_time")
 ```
 
 

@@ -64,15 +64,17 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_billing_usage (
         >
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    usage_date DATE,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.billing.usage - Raw billing usage data'
-LOCATION 's3://company-databricks-obs/bronze/system_billing_usage/'
 PARTITIONED BY (workspace_id, usage_date);
 
 -- =============================================================================
@@ -95,16 +97,17 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_billing_list_prices (
         subcategory STRING
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    effective_date DATE,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.billing.list_prices - Raw pricing data'
-LOCATION 's3://company-databricks-obs/bronze/system_billing_list_prices/'
-PARTITIONED BY (cloud, effective_date);
+PARTITIONED BY (effective_date);
 
 -- =============================================================================
 -- 3. TABLE PROPERTIES AND OPTIMIZATION
@@ -151,6 +154,6 @@ SHOW TBLPROPERTIES obs.bronze.system_billing_list_prices;
 -- 4. 05_bronze_storage_tables.sql - Create storage system tables
 -- 5. 06_bronze_access_tables.sql - Create access system tables
 
-PRINT 'Bronze billing tables created successfully!';
-PRINT 'Tables: system_billing_usage, system_billing_list_prices';
-PRINT 'Ready for compute table creation.';
+SELECT 'Bronze billing tables created successfully!' as message;
+SELECT 'Tables: system_billing_usage, system_billing_list_prices' as message;
+SELECT 'Ready for compute table creation.' as message;

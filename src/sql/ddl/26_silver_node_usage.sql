@@ -6,6 +6,9 @@
 -- Date: December 2024
 -- =============================================================================
 
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.silver.node_usage_minutely;
+
 CREATE TABLE IF NOT EXISTS obs.silver.node_usage_minutely (
     -- Basic identifiers
     workspace_id STRING NOT NULL,
@@ -14,6 +17,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.node_usage_minutely (
     
     -- Timing
     start_time TIMESTAMP NOT NULL,
+    start_date DATE,
     end_time TIMESTAMP NOT NULL,
     
     -- Node info
@@ -33,9 +37,7 @@ CREATE TABLE IF NOT EXISTS obs.silver.node_usage_minutely (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Silver table for node usage metrics with minutely granularity'
-LOCATION 's3://company-databricks-obs/silver/node_usage_minutely/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- Set properties
 ALTER TABLE obs.silver.node_usage_minutely SET TBLPROPERTIES (
@@ -44,9 +46,12 @@ ALTER TABLE obs.silver.node_usage_minutely SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
--- Add primary key constraint
+-- Add primary key constraint (idempotent)
+ALTER TABLE obs.silver.node_usage_minutely 
+DROP CONSTRAINT IF EXISTS pk_node_usage_minutely;
+
 ALTER TABLE obs.silver.node_usage_minutely 
 ADD CONSTRAINT pk_node_usage_minutely 
 PRIMARY KEY (workspace_id, cluster_id, instance_id, start_time);
 
-PRINT 'Silver node usage table created successfully!';
+SELECT 'Silver node usage table created successfully!' as message;

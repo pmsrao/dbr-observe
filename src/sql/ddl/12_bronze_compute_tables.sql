@@ -10,6 +10,9 @@
 -- 1. COMPUTE CLUSTERS TABLE
 -- =============================================================================
 
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_compute_clusters;
+
 CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_clusters (
     -- Raw data preservation
     raw_data STRUCT<
@@ -34,20 +37,25 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_clusters (
         change_time TIMESTAMP
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    change_time TIMESTAMP,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.compute.clusters - Raw cluster data'
-LOCATION 's3://company-databricks-obs/bronze/system_compute_clusters/'
-PARTITIONED BY (workspace_id, date(change_time));
+PARTITIONED BY (workspace_id, change_time);
 
 -- =============================================================================
 -- 2. COMPUTE WAREHOUSES TABLE
 -- =============================================================================
+
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_compute_warehouses;
 
 CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_warehouses (
     -- Raw data preservation
@@ -68,20 +76,25 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_warehouses (
         change_time TIMESTAMP
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    change_time TIMESTAMP,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.compute.warehouses - Raw warehouse data'
-LOCATION 's3://company-databricks-obs/bronze/system_compute_warehouses/'
-PARTITIONED BY (workspace_id, date(change_time));
+PARTITIONED BY (workspace_id, change_time);
 
 -- =============================================================================
 -- 3. COMPUTE NODE TYPES TABLE
 -- =============================================================================
+
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_compute_node_types;
 
 CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_node_types (
     -- Raw data preservation
@@ -95,20 +108,24 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_node_types (
         availability_zones ARRAY<STRING>
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    cloud STRING,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.compute.node_types - Raw node type data'
-LOCATION 's3://company-databricks-obs/bronze/system_compute_node_types/'
 PARTITIONED BY (cloud);
 
 -- =============================================================================
 -- 4. COMPUTE NODE TIMELINE TABLE
 -- =============================================================================
+
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_compute_node_timeline;
 
 CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_node_timeline (
     -- Raw data preservation
@@ -129,20 +146,26 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_node_timeline (
         disk_free_bytes_per_mount_point MAP<STRING, BIGINT>
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    start_time TIMESTAMP,
+    start_date DATE,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.compute.node_timeline - Raw node usage data'
-LOCATION 's3://company-databricks-obs/bronze/system_compute_node_timeline/'
-PARTITIONED BY (workspace_id, date(start_time));
+PARTITIONED BY (workspace_id, start_date);
 
 -- =============================================================================
 -- 5. COMPUTE WAREHOUSE EVENTS TABLE
 -- =============================================================================
+
+-- Drop table if exists (for schema changes)
+DROP TABLE IF EXISTS obs.bronze.system_compute_warehouse_events;
 
 CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_warehouse_events (
     -- Raw data preservation
@@ -155,16 +178,19 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_warehouse_events (
         details MAP<STRING, STRING>
     >,
     
+    -- Partitioning columns (extracted from raw_data for performance)
+    workspace_id STRING,
+    event_time TIMESTAMP,
+    event_date DATE,
+    
     -- Common bronze columns
     ingestion_timestamp TIMESTAMP,
     source_file STRING,
     record_hash STRING,
-    is_deleted BOOLEAN DEFAULT false
+    is_deleted BOOLEAN
 )
 USING DELTA
-COMMENT 'Bronze table for system.compute.warehouse_events - Raw warehouse events'
-LOCATION 's3://company-databricks-obs/bronze/system_compute_warehouse_events/'
-PARTITIONED BY (workspace_id, date(event_time));
+PARTITIONED BY (workspace_id, event_date);
 
 -- =============================================================================
 -- 6. TABLE PROPERTIES AND OPTIMIZATION
@@ -235,6 +261,6 @@ SHOW TBLPROPERTIES obs.bronze.system_compute_clusters;
 -- 3. 05_bronze_storage_tables.sql - Create storage system tables
 -- 4. 06_bronze_access_tables.sql - Create access system tables
 
-PRINT 'Bronze compute tables created successfully!';
-PRINT 'Tables: system_compute_clusters, system_compute_warehouses, system_compute_node_types, system_compute_node_timeline, system_compute_warehouse_events';
-PRINT 'Ready for lakeflow table creation.';
+SELECT 'Bronze compute tables created successfully!' as message;
+SELECT 'Tables: system_compute_clusters, system_compute_warehouses, system_compute_node_types, system_compute_node_timeline, system_compute_warehouse_events' as message;
+SELECT 'Ready for lakeflow table creation.' as message;

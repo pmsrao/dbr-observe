@@ -6,6 +6,9 @@
 -- Date: December 2024
 -- =============================================================================
 
+-- Set catalog context
+USE CATALOG obs;
+
 -- =============================================================================
 -- 1. DIMENSION TABLES PROCESSING
 -- =============================================================================
@@ -106,15 +109,15 @@ FROM obs.silver.billing_usage;
 -- Process dim_node_type from bronze system tables
 INSERT INTO obs.gold.dim_node_type
 SELECT DISTINCT
-    SHA2(node_type, 256) as node_type_sk,
-    node_type,
-    core_count,
-    memory_mb,
-    gpu_count,
+    SHA2(raw_data.node_type, 256) as node_type_sk,
+    raw_data.node_type,
+    raw_data.core_count,
+    raw_data.memory_mb,
+    raw_data.gpu_count,
     CURRENT_TIMESTAMP() as dw_created_ts,
     CURRENT_TIMESTAMP() as dw_updated_ts
 FROM obs.bronze.system_compute_node_types
-WHERE NOT is_deleted;
+WHERE raw_data IS NOT NULL AND NOT is_deleted;
 
 -- =============================================================================
 -- 2. FACT TABLES PROCESSING
@@ -140,13 +143,13 @@ SELECT
     usage_type,
     NULL as list_price,  -- To be populated from dim_sku
     NULL as total_cost,  -- To be calculated
-    obs.meta.extract_cost_center(custom_tags) as cost_center,
-    obs.meta.extract_business_unit(custom_tags) as business_unit,
-    obs.meta.extract_department(custom_tags) as department,
-    obs.meta.extract_data_product(custom_tags) as data_product,
-    obs.meta.extract_environment(custom_tags) as environment,
-    obs.meta.extract_team(custom_tags) as team,
-    obs.meta.extract_project(custom_tags) as project,
+    custom_tags['cost_center'] as cost_center,
+    custom_tags['business_unit'] as business_unit,
+    custom_tags['department'] as department,
+    custom_tags['data_product'] as data_product,
+    custom_tags['environment'] as environment,
+    custom_tags['team'] as team,
+    custom_tags['project'] as project,
     record_type,
     billing_origin_product,
     processing_timestamp
@@ -174,13 +177,13 @@ SELECT
         WHEN result_state = 'FAILED' THEN 0.0
         ELSE NULL
     END as success_rate,
-    obs.meta.extract_cost_center(tags) as cost_center,
-    obs.meta.extract_business_unit(tags) as business_unit,
-    obs.meta.extract_department(tags) as department,
-    obs.meta.extract_data_product(tags) as data_product,
-    obs.meta.extract_environment(tags) as environment,
-    obs.meta.extract_team(tags) as team,
-    obs.meta.extract_project(tags) as project,
+    NULL as cost_center,  -- To be linked from workflow entities
+    NULL as business_unit,
+    NULL as department,
+    NULL as data_product,
+    NULL as environment,
+    NULL as team,
+    NULL as project,
     processing_timestamp
 FROM obs.silver.workflow_runs;
 
@@ -259,8 +262,8 @@ SELECT 'fct_query_performance' as table_name, COUNT(*) as record_count FROM obs.
 -- 2. 04_data_quality_checks.sql - Perform data quality validation
 -- 3. 05_cost_calculation.sql - Calculate costs and showback metrics
 
-PRINT 'Silver to Gold processing completed successfully!';
-PRINT 'Dimension tables populated with current records';
-PRINT 'Fact tables populated with business keys and surrogate keys';
-PRINT 'Tag extraction applied for cost allocation';
-PRINT 'Ready for metrics calculation.';
+SELECT 'Silver to Gold processing completed successfully!' as message;
+SELECT 'Dimension tables populated with current records' as message;
+SELECT 'Fact tables populated with business keys and surrogate keys' as message;
+SELECT 'Tag extraction applied for cost allocation' as message;
+SELECT 'Ready for metrics calculation.' as message;

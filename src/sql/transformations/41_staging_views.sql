@@ -6,6 +6,9 @@
 -- Date: December 2024
 -- =============================================================================
 
+-- Set catalog context
+USE CATALOG obs;
+
 -- =============================================================================
 -- 1. COMPUTE ENTITIES STAGING VIEW
 -- =============================================================================
@@ -42,6 +45,7 @@ WITH cluster_data AS (
         ingestion_timestamp as processing_timestamp
     FROM obs.bronze.system_compute_clusters
     WHERE NOT is_deleted
+    AND raw_data IS NOT NULL
 ),
 warehouse_data AS (
     SELECT 
@@ -74,6 +78,7 @@ warehouse_data AS (
         ingestion_timestamp as processing_timestamp
     FROM obs.bronze.system_compute_warehouses
     WHERE NOT is_deleted
+    AND raw_data IS NOT NULL
 )
 SELECT 
     workspace_id,
@@ -158,6 +163,7 @@ WITH job_data AS (
         ingestion_timestamp as processing_timestamp
     FROM obs.bronze.system_lakeflow_jobs
     WHERE NOT is_deleted
+    AND raw_data IS NOT NULL
 ),
 pipeline_data AS (
     SELECT 
@@ -177,6 +183,7 @@ pipeline_data AS (
         ingestion_timestamp as processing_timestamp
     FROM obs.bronze.system_lakeflow_pipelines
     WHERE NOT is_deleted
+    AND raw_data IS NOT NULL
 )
 SELECT 
     workspace_id,
@@ -223,7 +230,7 @@ WITH job_runs AS (
         'JOB' as workflow_type,
         raw_data.job_id as workflow_id,
         raw_data.run_id,
-        raw_data.name as workflow_name,
+        NULL as workflow_name,
         raw_data.start_time,
         raw_data.end_time,
         raw_data.result_state,
@@ -236,6 +243,7 @@ WITH job_runs AS (
         ingestion_timestamp as processing_timestamp
     FROM obs.bronze.system_lakeflow_job_run_timeline
     WHERE NOT is_deleted
+    AND raw_data IS NOT NULL
 ),
 pipeline_runs AS (
     SELECT 
@@ -243,7 +251,7 @@ pipeline_runs AS (
         'PIPELINE' as workflow_type,
         raw_data.pipeline_id as workflow_id,
         raw_data.update_id as run_id,
-        raw_data.name as workflow_name,
+        NULL as workflow_name,
         raw_data.start_time,
         raw_data.end_time,
         raw_data.result_state,
@@ -256,6 +264,7 @@ pipeline_runs AS (
         ingestion_timestamp as processing_timestamp
     FROM obs.bronze.system_lakeflow_pipeline_update_timeline
     WHERE NOT is_deleted
+    AND raw_data IS NOT NULL
 )
 SELECT 
     workspace_id,
@@ -318,7 +327,8 @@ SELECT
     raw_data.product_features,
     ingestion_timestamp as processing_timestamp
 FROM obs.bronze.system_billing_usage
-WHERE NOT is_deleted;
+WHERE NOT is_deleted
+AND raw_data IS NOT NULL;
 
 -- =============================================================================
 -- 5. QUERY HISTORY STAGING VIEW
@@ -366,7 +376,8 @@ SELECT
     raw_data.query_parameters,
     ingestion_timestamp as processing_timestamp
 FROM obs.bronze.system_query_history
-WHERE NOT is_deleted;
+WHERE NOT is_deleted
+AND raw_data IS NOT NULL;
 
 -- =============================================================================
 -- 6. VERIFICATION
@@ -391,7 +402,7 @@ SELECT COUNT(*) as query_history_count FROM obs.silver.query_history_staging;
 -- 2. 03_processing_logic.sql - Create data processing logic
 -- 3. 04_tag_extraction_functions.sql - Create tag extraction functions
 
-PRINT 'Staging views created successfully!';
-PRINT 'Views: compute_entities_staging, workflow_entities_staging, workflow_runs_staging, billing_usage_staging, query_history_staging (all in silver schema)';
-PRINT 'Data harmonization implemented for unified entity processing';
-PRINT 'Ready for SCD2 functions.';
+SELECT 'Staging views created successfully!' as message;
+SELECT 'Views: compute_entities_staging, workflow_entities_staging, workflow_runs_staging, billing_usage_staging, query_history_staging (all in silver schema)' as message;
+SELECT 'Data harmonization implemented for unified entity processing' as message;
+SELECT 'Ready for SCD2 functions.' as message;

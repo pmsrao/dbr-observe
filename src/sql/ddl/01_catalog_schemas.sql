@@ -12,13 +12,9 @@
 
 -- Create main observability catalog
 CREATE CATALOG IF NOT EXISTS obs
-COMMENT 'Databricks Observability Platform - Main catalog for all observability data';
 
--- Set catalog properties for governance
-ALTER CATALOG obs SET PROPERTIES (
-    'owner' = 'data-platform-owner',
-    'description' = 'Comprehensive observability platform for Databricks workloads, costs, and performance'
-);
+-- Set catalog owner
+ALTER CATALOG obs OWNER TO `data-platform-owner`;
 
 -- =============================================================================
 -- 2. SCHEMA CREATION
@@ -26,71 +22,58 @@ ALTER CATALOG obs SET PROPERTIES (
 
 -- Bronze Layer - Raw system table data
 CREATE SCHEMA IF NOT EXISTS obs.bronze
-COMMENT 'Bronze layer - Raw system table data with minimal transformation'
 ;
 
 -- Silver Layer - Curated and unified data
 CREATE SCHEMA IF NOT EXISTS obs.silver
-COMMENT 'Silver layer - Curated data with SCD2 history tracking and harmonization'
 ;
 
--- Silver Staging - Temporary staging for harmonization (moved to silver schema)
--- CREATE SCHEMA IF NOT EXISTS obs.silver_stg
--- COMMENT 'Silver staging - Temporary tables for data harmonization and SCD2 processing'
--- LOCATION 's3://company-databricks-obs/silver_stg/';
 
 -- Gold Layer - Analytics-ready data
 CREATE SCHEMA IF NOT EXISTS obs.gold
-COMMENT 'Gold layer - Analytics-ready dimensions and facts for business intelligence'
 ;
 
 -- Meta Schema - Metadata and configuration management
 CREATE SCHEMA IF NOT EXISTS obs.meta
-COMMENT 'Meta schema - Metadata management, watermarks, lineage, and configuration'
 ;
 
 -- Ops Schema - Operational monitoring and metrics
 CREATE SCHEMA IF NOT EXISTS obs.ops
-COMMENT 'Ops schema - Operational monitoring, data quality metrics, and alerting'
 ;
 
 -- =============================================================================
 -- 3. SCHEMA PROPERTIES AND GOVERNANCE
 -- =============================================================================
 
--- Set schema properties for data governance
+-- Set schema owners (owner is reserved and cannot be set via SET PROPERTIES)
+ALTER SCHEMA obs.bronze OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.silver OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.gold OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.meta OWNER TO `data-platform-owner`;
+ALTER SCHEMA obs.ops OWNER TO `data-platform-owner`;
+
+-- Set schema properties for data governance (excluding owner)
 ALTER SCHEMA obs.bronze SET PROPERTIES (
-    'owner' = 'data-platform-owner',
     'retention_days' = '365',
     'data_classification' = 'internal'
 );
 
 ALTER SCHEMA obs.silver SET PROPERTIES (
-    'owner' = 'data-platform-owner',
     'retention_days' = '730',
     'data_classification' = 'internal'
 );
 
--- ALTER SCHEMA obs.silver_stg SET PROPERTIES (
---     'owner' = 'data-platform-team@company.com',
---     'retention_days' = '30',
---     'data_classification' = 'internal'
--- );
-
 ALTER SCHEMA obs.gold SET PROPERTIES (
-    'owner' = 'data-platform-owner',
     'retention_days' = '1095',
     'data_classification' = 'internal'
 );
 
 ALTER SCHEMA obs.meta SET PROPERTIES (
-    'owner' = 'data-platform-owner',
     'retention_days' = '365',
     'data_classification' = 'internal'
 );
 
 ALTER SCHEMA obs.ops SET PROPERTIES (
-    'owner' = 'data-platform-owner',
     'retention_days' = '365',
     'data_classification' = 'internal'
 );
@@ -108,8 +91,9 @@ SELECT
     catalog_name,
     schema_name,
     comment,
-    location,
-    properties
+    created,
+    created_by,
+    last_altered
 FROM information_schema.schemata 
 WHERE catalog_name = 'obs'
 ORDER BY schema_name;
@@ -125,7 +109,8 @@ ORDER BY schema_name;
 -- 4. Silver table creation scripts
 -- 5. Gold table creation scripts
 
-PRINT 'Environment setup completed successfully!';
-PRINT 'Catalog: obs';
-PRINT 'Schemas created: bronze, silver, gold, meta, ops';
-PRINT 'Ready for permissions setup and table creation.';
+-- Environment setup completed successfully!
+SELECT 'Environment setup completed successfully!' as status;
+SELECT 'Catalog: obs' as catalog_info;
+SELECT 'Schemas created: bronze, silver, gold, meta, ops' as schemas_info;
+SELECT 'Ready for permissions setup and table creation.' as next_steps;

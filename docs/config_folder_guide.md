@@ -14,7 +14,6 @@ The `config/` folder contains environment-specific configuration files that cont
 **Contents**:
 - Catalog names for each environment
 - Workspace URLs
-- Storage locations
 - Data retention policies
 
 **Example Usage**:
@@ -24,7 +23,6 @@ The `config/` folder contains environment-specific configuration files that cont
     "dev": {
       "catalog": "obs_dev",
       "workspace_url": "https://dev-workspace.cloud.databricks.com",
-      "storage_location": "s3://company-databricks-obs-dev/",
       "retention_days": {
         "bronze": 90,
         "silver": 180,
@@ -133,7 +131,7 @@ The `config/` folder contains environment-specific configuration files that cont
 
 ## 🚀 Usage in Code
 
-### Python/PySpark Example:
+### Python/PySpark Example (reading env settings):
 ```python
 import json
 
@@ -144,12 +142,10 @@ with open('config/environments.json', 'r') as f:
 # Get current environment settings
 current_env = env_config['environments']['prod']
 catalog_name = current_env['catalog']
-storage_location = current_env['storage_location']
 
-# Use in SQL
+# Use in SQL (schema locations default to catalog storage)
 spark.sql(f"""
     CREATE CATALOG IF NOT EXISTS {catalog_name}
-    LOCATION '{storage_location}'
 """)
 ```
 
@@ -212,7 +208,7 @@ WHERE source_table = 'system.billing.usage'
       "patternProperties": {
         "^[a-z]+$": {
           "type": "object",
-          "required": ["catalog", "workspace_url", "storage_location"]
+          "required": ["catalog", "workspace_url"]
         }
       }
     }

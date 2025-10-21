@@ -59,8 +59,6 @@ CREATE TABLE IF NOT EXISTS obs.gold.dim_compute (
     dw_updated_ts TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Gold dimension table for compute entities with SCD2 history'
-LOCATION 's3://company-databricks-obs/gold/dim_compute/'
 PARTITIONED BY (workspace_id);
 
 -- =============================================================================
@@ -103,8 +101,6 @@ CREATE TABLE IF NOT EXISTS obs.gold.dim_workflow (
     dw_updated_ts TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Gold dimension table for workflow entities with SCD2 history'
-LOCATION 's3://company-databricks-obs/gold/dim_workflow/'
 PARTITIONED BY (workspace_id);
 
 -- =============================================================================
@@ -125,9 +121,7 @@ CREATE TABLE IF NOT EXISTS obs.gold.dim_user (
     dw_created_ts TIMESTAMP NOT NULL,
     dw_updated_ts TIMESTAMP NOT NULL
 )
-USING DELTA
-COMMENT 'Gold dimension table for users and service principals'
-LOCATION 's3://company-databricks-obs/gold/dim_user/';
+USING DELTA;
 
 -- =============================================================================
 -- 4. DIM SKU TABLE
@@ -147,9 +141,7 @@ CREATE TABLE IF NOT EXISTS obs.gold.dim_sku (
     dw_created_ts TIMESTAMP NOT NULL,
     dw_updated_ts TIMESTAMP NOT NULL
 )
-USING DELTA
-COMMENT 'Gold dimension table for SKUs and pricing'
-LOCATION 's3://company-databricks-obs/gold/dim_sku/';
+USING DELTA;
 
 -- =============================================================================
 -- 5. DIM NODE TYPE TABLE
@@ -169,9 +161,7 @@ CREATE TABLE IF NOT EXISTS obs.gold.dim_node_type (
     dw_created_ts TIMESTAMP NOT NULL,
     dw_updated_ts TIMESTAMP NOT NULL
 )
-USING DELTA
-COMMENT 'Gold dimension table for node types and specifications'
-LOCATION 's3://company-databricks-obs/gold/dim_node_type/';
+USING DELTA;
 
 -- =============================================================================
 -- 6. TABLE PROPERTIES AND CONSTRAINTS
@@ -208,22 +198,37 @@ ALTER TABLE obs.gold.dim_node_type SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
--- Add primary key constraints
+-- Add primary key constraints (idempotent)
+ALTER TABLE obs.gold.dim_compute 
+DROP CONSTRAINT IF EXISTS pk_dim_compute;
+
 ALTER TABLE obs.gold.dim_compute 
 ADD CONSTRAINT pk_dim_compute 
 PRIMARY KEY (compute_sk);
+
+ALTER TABLE obs.gold.dim_workflow 
+DROP CONSTRAINT IF EXISTS pk_dim_workflow;
 
 ALTER TABLE obs.gold.dim_workflow 
 ADD CONSTRAINT pk_dim_workflow 
 PRIMARY KEY (workflow_sk);
 
 ALTER TABLE obs.gold.dim_user 
+DROP CONSTRAINT IF EXISTS pk_dim_user;
+
+ALTER TABLE obs.gold.dim_user 
 ADD CONSTRAINT pk_dim_user 
 PRIMARY KEY (user_sk);
 
 ALTER TABLE obs.gold.dim_sku 
+DROP CONSTRAINT IF EXISTS pk_dim_sku;
+
+ALTER TABLE obs.gold.dim_sku 
 ADD CONSTRAINT pk_dim_sku 
 PRIMARY KEY (sku_sk);
+
+ALTER TABLE obs.gold.dim_node_type 
+DROP CONSTRAINT IF EXISTS pk_dim_node_type;
 
 ALTER TABLE obs.gold.dim_node_type 
 ADD CONSTRAINT pk_dim_node_type 
@@ -250,7 +255,7 @@ DESCRIBE TABLE obs.gold.dim_node_type;
 -- 3. SCD2 merge logic and functions
 -- 4. Data processing logic
 
-PRINT 'Gold dimension tables created successfully!';
-PRINT 'Tables: dim_compute, dim_workflow, dim_user, dim_sku, dim_node_type';
-PRINT 'SCD2 patterns implemented for compute and workflow dimensions';
-PRINT 'Ready for fact table creation.';
+SELECT 'Gold dimension tables created successfully!' as message;
+SELECT 'Tables: dim_compute, dim_workflow, dim_user, dim_sku, dim_node_type' as message;
+SELECT 'SCD2 patterns implemented for compute and workflow dimensions' as message;
+SELECT 'Ready for fact table creation.' as message;

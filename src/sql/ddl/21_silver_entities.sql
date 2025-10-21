@@ -58,8 +58,6 @@ CREATE TABLE IF NOT EXISTS obs.silver.compute_entities (
     delete_time TIMESTAMP
 )
 USING DELTA
-COMMENT 'Silver table for unified compute entities (clusters and warehouses) with SCD2 history tracking'
-LOCATION 's3://company-databricks-obs/silver/compute_entities/'
 PARTITIONED BY (workspace_id, compute_type);
 
 -- =============================================================================
@@ -101,8 +99,6 @@ CREATE TABLE IF NOT EXISTS obs.silver.workflow_entities (
     delete_time TIMESTAMP
 )
 USING DELTA
-COMMENT 'Silver table for unified workflow entities (jobs and pipelines) with SCD2 history tracking'
-LOCATION 's3://company-databricks-obs/silver/workflow_entities/'
 PARTITIONED BY (workspace_id, workflow_type);
 
 -- =============================================================================
@@ -128,9 +124,16 @@ ALTER TABLE obs.silver.workflow_entities SET TBLPROPERTIES (
 );
 
 -- Add constraints for data integrity
+-- Add primary key constraints (idempotent)
+ALTER TABLE obs.silver.compute_entities 
+DROP CONSTRAINT IF EXISTS pk_compute_entities;
+
 ALTER TABLE obs.silver.compute_entities 
 ADD CONSTRAINT pk_compute_entities 
 PRIMARY KEY (workspace_id, compute_type, compute_id, effective_start_ts);
+
+ALTER TABLE obs.silver.workflow_entities 
+DROP CONSTRAINT IF EXISTS pk_workflow_entities;
 
 ALTER TABLE obs.silver.workflow_entities 
 ADD CONSTRAINT pk_workflow_entities 
@@ -166,7 +169,7 @@ SHOW TBLPROPERTIES obs.silver.workflow_entities;
 -- 4. 05_silver_audit_log.sql - Create audit log table
 -- 5. Staging views for data harmonization
 
-PRINT 'Silver entity tables created successfully!';
-PRINT 'Tables: compute_entities, workflow_entities';
-PRINT 'SCD2 patterns implemented with proper audit columns';
-PRINT 'Ready for workflow runs table creation.';
+SELECT 'Silver entity tables created successfully!' as message;
+SELECT 'Tables: compute_entities, workflow_entities' as message;
+SELECT 'SCD2 patterns implemented with proper audit columns' as message;
+SELECT 'Ready for workflow runs table creation.' as message;

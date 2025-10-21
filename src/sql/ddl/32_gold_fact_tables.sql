@@ -53,8 +53,6 @@ CREATE TABLE IF NOT EXISTS obs.gold.fct_billing_usage_hourly (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Gold fact table for billing usage with hourly granularity and cost attribution'
-LOCATION 's3://company-databricks-obs/gold/fct_billing_usage_hourly/'
 PARTITIONED BY (workspace_id, usage_date);
 
 -- =============================================================================
@@ -100,8 +98,6 @@ CREATE TABLE IF NOT EXISTS obs.gold.fct_workflow_runs (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Gold fact table for workflow runs with performance metrics'
-LOCATION 's3://company-databricks-obs/gold/fct_workflow_runs/'
 PARTITIONED BY (workspace_id, run_date);
 
 -- =============================================================================
@@ -154,8 +150,6 @@ CREATE TABLE IF NOT EXISTS obs.gold.fct_query_performance (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Gold fact table for query performance with efficiency metrics'
-LOCATION 's3://company-databricks-obs/gold/fct_query_performance/'
 PARTITIONED BY (workspace_id, query_date);
 
 -- =============================================================================
@@ -202,8 +196,6 @@ CREATE TABLE IF NOT EXISTS obs.gold.fct_node_usage_hourly (
     processing_timestamp TIMESTAMP NOT NULL
 )
 USING DELTA
-COMMENT 'Gold fact table for node usage with hourly aggregation'
-LOCATION 's3://company-databricks-obs/gold/fct_node_usage_hourly/'
 PARTITIONED BY (workspace_id, usage_date);
 
 -- =============================================================================
@@ -235,18 +227,30 @@ ALTER TABLE obs.gold.fct_node_usage_hourly SET TBLPROPERTIES (
     'delta.enableChangeDataFeed' = 'true'
 );
 
--- Add primary key constraints
+-- Add primary key constraints (idempotent)
+ALTER TABLE obs.gold.fct_billing_usage_hourly 
+DROP CONSTRAINT IF EXISTS pk_fct_billing_usage_hourly;
+
 ALTER TABLE obs.gold.fct_billing_usage_hourly 
 ADD CONSTRAINT pk_fct_billing_usage_hourly 
 PRIMARY KEY (billing_sk);
+
+ALTER TABLE obs.gold.fct_workflow_runs 
+DROP CONSTRAINT IF EXISTS pk_fct_workflow_runs;
 
 ALTER TABLE obs.gold.fct_workflow_runs 
 ADD CONSTRAINT pk_fct_workflow_runs 
 PRIMARY KEY (workflow_run_sk);
 
 ALTER TABLE obs.gold.fct_query_performance 
+DROP CONSTRAINT IF EXISTS pk_fct_query_performance;
+
+ALTER TABLE obs.gold.fct_query_performance 
 ADD CONSTRAINT pk_fct_query_performance 
 PRIMARY KEY (query_sk);
+
+ALTER TABLE obs.gold.fct_node_usage_hourly 
+DROP CONSTRAINT IF EXISTS pk_fct_node_usage_hourly;
 
 ALTER TABLE obs.gold.fct_node_usage_hourly 
 ADD CONSTRAINT pk_fct_node_usage_hourly 
@@ -272,7 +276,7 @@ DESCRIBE TABLE obs.gold.fct_node_usage_hourly;
 -- 3. Data processing logic
 -- 4. Tag extraction functions
 
-PRINT 'Gold fact tables created successfully!';
-PRINT 'Tables: fct_billing_usage_hourly, fct_workflow_runs, fct_query_performance, fct_node_usage_hourly';
-PRINT 'Star schema implemented with proper surrogate keys';
-PRINT 'Ready for staging views and processing logic.';
+SELECT 'Gold fact tables created successfully!' as message;
+SELECT 'Tables: fct_billing_usage_hourly, fct_workflow_runs, fct_query_performance, fct_node_usage_hourly' as message;
+SELECT 'Star schema implemented with proper surrogate keys' as message;
+SELECT 'Ready for staging views and processing logic.' as message;
