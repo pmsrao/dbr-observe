@@ -492,7 +492,7 @@ class BronzeProcessor:
             watermark = self.watermark_manager.get_watermark(
                 "system.compute.node_types",
                 "obs.bronze.system_compute_node_types", 
-                "node_type"
+                "change_time"
             )
             
             if watermark is None:
@@ -504,7 +504,7 @@ class BronzeProcessor:
             # Read from system table with watermark filter
             try:
                 node_types_source = self.spark.table("system.compute.node_types") \
-                    .filter(col("node_type") > watermark)
+                    .filter(col("change_time") > watermark)
             except Exception as e:
                 logger.warning(f"System table system.compute.node_types not accessible: {str(e)}")
                 logger.info("Skipping compute node types ingestion - system table not available")
@@ -543,14 +543,14 @@ class BronzeProcessor:
             # Update watermark
             record_count = node_types_bronze.count()
             if record_count > 0:
-                latest_node_type = node_types_bronze.select("node_type").orderBy(col("node_type").desc()).limit(1).collect()
-                if latest_node_type:
-                    # Convert node_type to string for watermark
-                    watermark_value = str(latest_node_type[0]["node_type"])
+                latest_timestamp = node_types_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["change_time"])
                     self.watermark_manager.update_watermark(
                         "system.compute.node_types",
                         "obs.bronze.system_compute_node_types",
-                        "node_type",
+                        "change_time",
                         watermark_value,
                         "SUCCESS",
                         None,
@@ -875,9 +875,9 @@ class BronzeProcessor:
                     col("sku_name").alias("sku_name"),
                     col("cloud").alias("cloud"),
                     col("price_start_time").alias("effective_date"),
-                    col("unit_price").alias("unit_price"),
-                    col("currency").alias("currency"),
-                    col("unit").alias("unit")
+                    col("pricing").alias("unit_price"),
+                    col("currency_code").alias("currency"),
+                    col("usage_unit").alias("unit")
                 ).alias("raw_data"),
                 col("cloud"),
                 col("price_start_time"),
@@ -888,9 +888,9 @@ class BronzeProcessor:
                         col("sku_name"),
                         col("cloud"),
                         col("price_start_time").cast("string"),
-                        col("unit_price").cast("string"),
-                        col("currency"),
-                        col("unit")
+                        col("pricing").cast("string"),
+                        col("currency_code"),
+                        col("usage_unit")
                     ), 256
                 ).alias("record_hash"),
                 lit(False).alias("is_deleted")
@@ -979,10 +979,10 @@ class BronzeProcessor:
                     col("execution_status").alias("execution_status"),
                     col("start_time").alias("start_time"),
                     col("end_time").alias("end_time"),
-                    col("duration_ms").alias("duration_ms"),
-                    col("query_type").alias("query_type"),
-                    col("warehouse_id").alias("warehouse_id"),
-                    col("cluster_id").alias("cluster_id")
+                    col("total_duration_ms").alias("duration_ms"),
+                    col("statement_type").alias("query_type"),
+                    col("compute").alias("warehouse_id"),
+                    lit(None).cast("string").alias("cluster_id")
                 ).alias("raw_data"),
                 col("workspace_id"),
                 col("start_time"),
@@ -996,10 +996,10 @@ class BronzeProcessor:
                         col("execution_status"),
                         col("start_time").cast("string"),
                         col("end_time").cast("string"),
-                        col("duration_ms").cast("string"),
-                        col("query_type"),
-                        col("warehouse_id"),
-                        col("cluster_id")
+                        col("total_duration_ms").cast("string"),
+                        col("statement_type"),
+                        col("compute"),
+                        lit("").alias("cluster_id")
                     ), 256
                 ).alias("record_hash"),
                 lit(False).alias("is_deleted")
