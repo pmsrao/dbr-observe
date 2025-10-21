@@ -355,17 +355,19 @@ class BronzeProcessor:
             if record_count > 0:
                 latest_timestamp = compute_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
                 if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["change_time"])
                     self.watermark_manager.update_watermark(
                         "system.compute.clusters",
                         "obs.bronze.system_compute_clusters",
                         "change_time",
-                        latest_timestamp[0]["change_time"].isoformat(),
+                        watermark_value,
                         "SUCCESS",
                         None,
                         record_count,
                         0  # Duration would be calculated
                     )
-                    logger.info(f"Updated watermark for compute clusters: {latest_timestamp[0]['change_time']}")
+                    logger.info(f"Updated watermark for compute clusters: {watermark_value}")
             
             logger.info(f"Compute clusters ingested successfully - {record_count} records")
             return True
@@ -443,24 +445,24 @@ class BronzeProcessor:
             # Write to bronze table
             warehouse_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_warehouses")
             
-                # Update watermark
-                record_count = warehouse_bronze.count()
-                if record_count > 0:
-                    latest_timestamp = warehouse_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
-                    if latest_timestamp:
-                        # Convert timestamp to string for watermark
-                        watermark_value = str(latest_timestamp[0]["change_time"])
-                        self.watermark_manager.update_watermark(
-                            "system.compute.warehouses",
-                            "obs.bronze.system_compute_warehouses",
-                            "change_time",
-                            watermark_value,
-                            "SUCCESS",
-                            None,
-                            record_count,
-                            0
-                        )
-                        logger.info(f"Updated watermark for compute warehouses: {watermark_value}")
+            # Update watermark
+            record_count = warehouse_bronze.count()
+            if record_count > 0:
+                latest_timestamp = warehouse_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
+                if latest_timestamp:
+                    # Convert timestamp to string for watermark
+                    watermark_value = str(latest_timestamp[0]["change_time"])
+                    self.watermark_manager.update_watermark(
+                        "system.compute.warehouses",
+                        "obs.bronze.system_compute_warehouses",
+                        "change_time",
+                        watermark_value,
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for compute warehouses: {watermark_value}")
             
             logger.info(f"Compute warehouses ingested successfully - {record_count} records")
             return True
