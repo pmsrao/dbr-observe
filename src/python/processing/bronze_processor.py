@@ -850,10 +850,10 @@ class BronzeProcessor:
                 logger.info(f"Processing delta from watermark: {watermark}")
                 print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
             
-                # Read from system table with watermark filter
-                try:
-                    prices_source = self.spark.table("system.billing.list_prices") \
-                        .filter(col("price_start_time") > watermark)
+            # Read from system table with watermark filter
+            try:
+                prices_source = self.spark.table("system.billing.list_prices") \
+                    .filter(col("price_start_time") > watermark)
                 print(f"🔄 DEBUG: Read from system.billing.list_prices, checking record count...")
                 source_count = prices_source.count()
                 print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
