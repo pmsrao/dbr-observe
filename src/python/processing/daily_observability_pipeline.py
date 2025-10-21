@@ -9,7 +9,7 @@ Date: December 2024
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, current_timestamp, lit, when, coalesce
+from pyspark.sql.functions import col, current_timestamp, lit, when, coalesce, sha2, concat_ws
 from pyspark.sql.types import TimestampType
 import logging
 import sys
@@ -367,8 +367,8 @@ class DailyObservabilityPipeline:
                 # Create raw_data struct with all the original fields
                 col("cluster_id").alias("raw_data.cluster_id"),
                 col("workspace_id").alias("raw_data.workspace_id"),
-                col("name").alias("raw_data.name"),
-                col("owner").alias("raw_data.owner"),
+                col("cluster_name").alias("raw_data.name"),
+                col("owned_by").alias("raw_data.owner"),
                 col("driver_node_type").alias("raw_data.driver_node_type"),
                 col("worker_node_type").alias("raw_data.worker_node_type"),
                 col("worker_count").alias("raw_data.worker_count"),
@@ -376,8 +376,9 @@ class DailyObservabilityPipeline:
                 col("max_autoscale_workers").alias("raw_data.max_autoscale_workers"),
                 col("auto_termination_minutes").alias("raw_data.auto_termination_minutes"),
                 col("enable_elastic_disk").alias("raw_data.enable_elastic_disk"),
-                col("data_security_mode").alias("raw_data.data_security_mode"),
-                col("policy_id").alias("raw_data.policy_id"),
+                # Note: data_security_mode, policy_id might not exist in system table
+                lit(None).cast("string").alias("raw_data.data_security_mode"),
+                lit(None).cast("string").alias("raw_data.policy_id"),
                 col("dbr_version").alias("raw_data.dbr_version"),
                 col("cluster_source").alias("raw_data.cluster_source"),
                 col("tags").alias("raw_data.tags"),
@@ -394,8 +395,8 @@ class DailyObservabilityPipeline:
                     concat_ws("|",
                         col("workspace_id"),
                         col("cluster_id"),
-                        col("name"),
-                        col("owner"),
+                        col("cluster_name"),
+                        col("owned_by"),
                         col("driver_node_type"),
                         col("worker_node_type"),
                         col("worker_count").cast("string"),
@@ -403,8 +404,8 @@ class DailyObservabilityPipeline:
                         col("max_autoscale_workers").cast("string"),
                         col("auto_termination_minutes").cast("string"),
                         col("enable_elastic_disk").cast("string"),
-                        col("data_security_mode"),
-                        col("policy_id"),
+                        lit("").alias("data_security_mode"),
+                        lit("").alias("policy_id"),
                         col("dbr_version"),
                         col("cluster_source"),
                         col("tags").cast("string")
