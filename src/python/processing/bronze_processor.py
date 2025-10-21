@@ -835,12 +835,12 @@ class BronzeProcessor:
             logger.info("Ingesting billing list prices...")
             print("🔄 DEBUG: Starting billing list prices ingestion...")
             
-                # Get watermark for delta processing
-                watermark = self.watermark_manager.get_watermark(
-                    "system.billing.list_prices",
-                    "obs.bronze.system_billing_list_prices", 
-                    "price_start_time"
-                )
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.billing.list_prices",
+                "obs.bronze.system_billing_list_prices", 
+                "price_start_time"
+            )
             
             if watermark is None:
                 watermark = "1900-01-01"
