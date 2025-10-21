@@ -11,15 +11,13 @@ Date: December 2024
 from pyspark.sql import SparkSession
 import logging
 
-# Import specialized ingestion classes
-from .bronze import (
-    ComputeIngestion,
-    LakeflowIngestion,
-    BillingIngestion,
-    AuditIngestion,
-    QueryIngestion,
-    StorageIngestion
-)
+# Import specialized ingestion classes directly
+from bronze.compute_ingestion import ComputeIngestion
+from bronze.lakeflow_ingestion import LakeflowIngestion
+from bronze.billing_ingestion import BillingIngestion
+from bronze.audit_ingestion import AuditIngestion
+from bronze.query_ingestion import QueryIngestion
+from bronze.storage_ingestion import StorageIngestion
 
 logger = logging.getLogger(__name__)
 
