@@ -111,25 +111,61 @@ class WatermarkManager:
             True if successful, False otherwise
         """
         try:
-            # Create new watermark record with explicit schema
-            new_record = self.spark.createDataFrame([{
-                "source_table_name": source_table,
-                "target_table_name": target_table,
-                "watermark_column": watermark_column,
-                "watermark_value": str(watermark_value),  # Ensure string type
-                "last_updated": current_timestamp(),
-                "processing_status": processing_status,
-                "error_message": error_message,
-                "records_processed": int(records_processed),  # Ensure integer type
-                "processing_duration_ms": int(processing_duration_ms),  # Ensure integer type
-                "created_by": "pyspark",
-                "created_at": current_timestamp(),
-                "updated_by": "pyspark",
-                "updated_at": current_timestamp()
-            }], schema=self.watermark_schema)
+            # Ensure all values are properly typed
+            watermark_str = str(watermark_value) if watermark_value is not None else "1900-01-01 00:00:00"
+            records_int = int(records_processed) if records_processed is not None else 0
+            duration_int = int(processing_duration_ms) if processing_duration_ms is not None else 0
+            error_str = str(error_message) if error_message is not None else None
+            status_str = str(processing_status) if processing_status is not None else "UNKNOWN"
             
-            # Insert new record
-            new_record.write.mode("append").saveAsTable(self.watermarks_table)
+            print(f"🔄 DEBUG: Updating watermark - {source_table} -> {target_table}: {watermark_str}")
+            print(f"🔄 DEBUG: Records: {records_int}, Duration: {duration_int}, Status: {status_str}")
+            
+            # Create new watermark record with explicit schema
+            try:
+                new_record = self.spark.createDataFrame([{
+                    "source_table_name": str(source_table),
+                    "target_table_name": str(target_table),
+                    "watermark_column": str(watermark_column),
+                    "watermark_value": watermark_str,
+                    "last_updated": current_timestamp(),
+                    "processing_status": status_str,
+                    "error_message": error_str,
+                    "records_processed": records_int,
+                    "processing_duration_ms": duration_int,
+                    "created_by": "pyspark",
+                    "created_at": current_timestamp(),
+                    "updated_by": "pyspark",
+                    "updated_at": current_timestamp()
+                }], schema=self.watermark_schema)
+                
+                print(f"🔄 DEBUG: DataFrame created successfully")
+                
+                # Insert new record
+                new_record.write.mode("append").saveAsTable(self.watermarks_table)
+                print(f"✅ DEBUG: Watermark record inserted successfully")
+                
+            except Exception as df_error:
+                print(f"❌ DEBUG: DataFrame creation error: {str(df_error)}")
+                # Try without explicit schema as fallback
+                new_record = self.spark.createDataFrame([{
+                    "source_table_name": str(source_table),
+                    "target_table_name": str(target_table),
+                    "watermark_column": str(watermark_column),
+                    "watermark_value": watermark_str,
+                    "last_updated": current_timestamp(),
+                    "processing_status": status_str,
+                    "error_message": error_str,
+                    "records_processed": records_int,
+                    "processing_duration_ms": duration_int,
+                    "created_by": "pyspark",
+                    "created_at": current_timestamp(),
+                    "updated_by": "pyspark",
+                    "updated_at": current_timestamp()
+                }])
+                
+                new_record.write.mode("append").saveAsTable(self.watermarks_table)
+                print(f"✅ DEBUG: Watermark record inserted with fallback method")
             
             logger.info(f"Updated watermark for {source_table} -> {target_table}: {watermark_value}")
             return True

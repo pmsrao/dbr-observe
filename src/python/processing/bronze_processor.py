@@ -764,7 +764,7 @@ class BronzeProcessor:
                     col("usage_end_time").alias("usage_end_time"),
                     col("usage_date").alias("usage_date"),
                     col("usage_unit").alias("usage_unit"),
-                    col("usage_quantity").cast("decimal(38,18)").alias("usage_quantity"),  # Fix decimal precision
+                    col("usage_quantity").cast("double").alias("usage_quantity"),  # Cast to double to avoid decimal precision issues
                     col("usage_type").alias("usage_type"),
                     col("record_type").alias("record_type")
                 ).alias("raw_data"),
@@ -791,8 +791,13 @@ class BronzeProcessor:
             )
             
             print("🔄 DEBUG: Writing to bronze table...")
-            # Write to bronze table
-            billing_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_billing_usage")
+            # Write to bronze table with more aggressive schema merging
+            billing_bronze.write \
+                .mode("append") \
+                .option("mergeSchema", "true") \
+                .option("spark.sql.adaptive.enabled", "true") \
+                .option("spark.sql.adaptive.coalescePartitions.enabled", "true") \
+                .saveAsTable(f"{self.catalog}.bronze.system_billing_usage")
             
             # Update watermark
             record_count = billing_bronze.count()
@@ -1044,7 +1049,7 @@ class BronzeProcessor:
             watermark = self.watermark_manager.get_watermark(
                 "system.access.audit",
                 "obs.bronze.system_access_audit", 
-                "timestamp"
+                "event_time"
             )
             
             if watermark is None:
@@ -1058,7 +1063,7 @@ class BronzeProcessor:
             # Read from system table with watermark filter
             try:
                 audit_source = self.spark.table("system.access.audit") \
-                    .filter(col("timestamp") > watermark)
+                    .filter(col("event_time") > watermark)
                 print(f"🔄 DEBUG: Read from system.access.audit, checking record count...")
                 source_count = audit_source.count()
                 print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
@@ -1077,24 +1082,24 @@ class BronzeProcessor:
             print("🔄 DEBUG: Transforming data to bronze format...")
             audit_bronze = audit_source.select(
                 struct(
-                    col("timestamp").alias("timestamp"),
+                    col("event_time").alias("timestamp"),
                     col("user_identity").alias("user_identity"),
-                    col("action").alias("action"),
-                    col("resource").alias("resource"),
-                    col("result").alias("result"),
+                    col("action_name").alias("action"),
+                    col("request_id").alias("resource"),
+                    col("response").alias("result"),
                     col("workspace_id").alias("workspace_id")
                 ).alias("raw_data"),
                 col("workspace_id"),
-                col("timestamp"),
+                col("event_time"),
                 current_timestamp().alias("ingestion_timestamp"),
                 lit("system.access.audit").alias("source_file"),
                 sha2(
                     concat_ws("|",
-                        col("timestamp").cast("string"),
+                        col("event_time").cast("string"),
                         col("user_identity"),
-                        col("action"),
-                        col("resource"),
-                        col("result"),
+                        col("action_name"),
+                        col("request_id"),
+                        col("response"),
                         col("workspace_id")
                     ), 256
                 ).alias("record_hash"),
@@ -1109,14 +1114,14 @@ class BronzeProcessor:
             record_count = audit_bronze.count()
             print(f"🔄 DEBUG: Written {record_count} records to bronze table")
             if record_count > 0:
-                latest_timestamp = audit_bronze.select("timestamp").orderBy(col("timestamp").desc()).limit(1).collect()
+                latest_timestamp = audit_bronze.select("event_time").orderBy(col("event_time").desc()).limit(1).collect()
                 if latest_timestamp:
                     # Convert timestamp to string for watermark
-                    watermark_value = str(latest_timestamp[0]["timestamp"])
+                    watermark_value = str(latest_timestamp[0]["event_time"])
                     self.watermark_manager.update_watermark(
                         "system.access.audit",
                         "obs.bronze.system_access_audit",
-                        "timestamp",
+                        "event_time",
                         watermark_value,
                         "SUCCESS",
                         None,
