@@ -184,12 +184,12 @@ try:
         
         # Audit schema tables
         try:
-            audit_log_count = spark.table("obs.bronze.system_audit_log").count()
+            audit_log_count = spark.table("obs.bronze.system_access_audit").count()
             print(f"   🔐 Audit Schema:")
-            print(f"      - system_audit_log: {audit_log_count} rows")
+            print(f"      - system_access_audit: {audit_log_count} rows")
         except Exception as e:
             print(f"   🔐 Audit Schema: Table not found - {str(e)}")
-            print(f"      - system_audit_log: Table does not exist (may not be created yet)")
+            print(f"      - system_access_audit: Table does not exist (may not be created yet)")
         
         # Storage schema tables
         try:
@@ -481,7 +481,7 @@ bronze_tables = [
     # Query schema
     ("Bronze", "bronze.system_query_history"),
     # Audit schema
-    ("Bronze", "bronze.system_audit_log"),
+    ("Bronze", "bronze.system_access_audit"),
     # Storage schema
     ("Bronze", "bronze.system_storage_ops")
 ]

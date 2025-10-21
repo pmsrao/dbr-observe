@@ -41,43 +41,71 @@ class BronzeProcessor:
         """
         try:
             logger.info("Starting system to bronze processing...")
+            print("🔄 DEBUG: Starting system to bronze processing...")
             
             # Process each source schema using specialized processors
             success = True
             
             # Compute tables
+            print("🔄 DEBUG: Processing compute tables...")
             if not self._ingest_all_compute_tables():
                 success = False
+                print("❌ DEBUG: Compute tables processing failed")
+            else:
+                print("✅ DEBUG: Compute tables processing completed")
                 
             # Lakeflow tables
+            print("🔄 DEBUG: Processing lakeflow tables...")
             if not self._ingest_all_lakeflow_tables():
                 success = False
+                print("❌ DEBUG: Lakeflow tables processing failed")
+            else:
+                print("✅ DEBUG: Lakeflow tables processing completed")
                 
             # Billing tables
+            print("🔄 DEBUG: Processing billing tables...")
             if not self._ingest_all_billing_tables():
                 success = False
+                print("❌ DEBUG: Billing tables processing failed")
+            else:
+                print("✅ DEBUG: Billing tables processing completed")
                 
             # Query tables
+            print("🔄 DEBUG: Processing query tables...")
             if not self._ingest_all_query_tables():
                 success = False
+                print("❌ DEBUG: Query tables processing failed")
+            else:
+                print("✅ DEBUG: Query tables processing completed")
                 
             # Access tables
+            print("🔄 DEBUG: Processing audit tables...")
             if not self._ingest_all_audit_tables():
                 success = False
+                print("❌ DEBUG: Audit tables processing failed")
+            else:
+                print("✅ DEBUG: Audit tables processing completed")
                 
             # Storage tables
+            print("🔄 DEBUG: Processing storage tables...")
             if not self._ingest_all_storage_tables():
                 success = False
+                print("❌ DEBUG: Storage tables processing failed")
+            else:
+                print("✅ DEBUG: Storage tables processing completed")
             
             if success:
                 logger.info("System to bronze processing completed successfully")
+                print("✅ DEBUG: System to bronze processing completed successfully")
             else:
                 logger.error("System to bronze processing completed with errors")
+                print("❌ DEBUG: System to bronze processing completed with errors")
                 
             return success
             
         except Exception as e:
             logger.error(f"Error in system to bronze processing: {str(e)}")
+            print(f"❌ DEBUG: Error in system to bronze processing: {str(e)}")
             return False
     
     def _ingest_all_compute_tables(self) -> bool:
@@ -348,13 +376,177 @@ class BronzeProcessor:
     
     def _ingest_compute_warehouses(self) -> bool:
         """Ingest compute warehouses from system table to bronze."""
-        logger.info("Ingesting compute warehouses...")
-        return True
+        try:
+            logger.info("Ingesting compute warehouses...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.compute.warehouses",
+                "obs.bronze.system_compute_warehouses", 
+                "change_time"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                warehouse_source = self.spark.table("system.compute.warehouses") \
+                    .filter(col("change_time") > watermark)
+            except Exception as e:
+                logger.warning(f"System table system.compute.warehouses not accessible: {str(e)}")
+                logger.info("Skipping compute warehouses ingestion - system table not available")
+                return True
+            
+            # Transform to bronze format
+            warehouse_bronze = warehouse_source.select(
+                struct(
+                    col("warehouse_id").alias("warehouse_id"),
+                    col("workspace_id").alias("workspace_id"),
+                    col("warehouse_name").alias("name"),
+                    col("owned_by").alias("owner"),
+                    col("warehouse_type").alias("warehouse_type"),
+                    col("warehouse_size").alias("warehouse_size"),
+                    col("warehouse_channel").alias("warehouse_channel"),
+                    col("min_clusters").alias("min_clusters"),
+                    col("max_clusters").alias("max_clusters"),
+                    col("auto_stop_minutes").alias("auto_stop_minutes"),
+                    col("tags").alias("tags"),
+                    col("create_time").alias("create_time"),
+                    col("delete_time").alias("delete_time"),
+                    col("change_time").alias("change_time")
+                ).alias("raw_data"),
+                col("workspace_id"),
+                col("change_time"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.compute.warehouses").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("warehouse_id"),
+                        col("workspace_id"),
+                        col("warehouse_name"),
+                        col("owned_by"),
+                        col("warehouse_type"),
+                        col("warehouse_size"),
+                        col("warehouse_channel"),
+                        col("min_clusters").cast("string"),
+                        col("max_clusters").cast("string"),
+                        col("auto_stop_minutes").cast("string")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            # Write to bronze table
+            warehouse_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_warehouses")
+            
+            # Update watermark
+            record_count = warehouse_bronze.count()
+            if record_count > 0:
+                latest_timestamp = warehouse_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
+                if latest_timestamp:
+                    self.watermark_manager.update_watermark(
+                        "system.compute.warehouses",
+                        "obs.bronze.system_compute_warehouses",
+                        "change_time",
+                        latest_timestamp[0]["change_time"].isoformat(),
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for compute warehouses: {latest_timestamp[0]['change_time']}")
+            
+            logger.info(f"Compute warehouses ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting compute warehouses: {str(e)}")
+            return False
     
     def _ingest_compute_node_types(self) -> bool:
         """Ingest compute node types from system table to bronze."""
-        logger.info("Ingesting compute node types...")
-        return True
+        try:
+            logger.info("Ingesting compute node types...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.compute.node_types",
+                "obs.bronze.system_compute_node_types", 
+                "cloud"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                node_types_source = self.spark.table("system.compute.node_types") \
+                    .filter(col("cloud") > watermark)
+            except Exception as e:
+                logger.warning(f"System table system.compute.node_types not accessible: {str(e)}")
+                logger.info("Skipping compute node types ingestion - system table not available")
+                return True
+            
+            # Transform to bronze format
+            node_types_bronze = node_types_source.select(
+                struct(
+                    col("node_type").alias("node_type"),
+                    col("core_count").alias("core_count"),
+                    col("memory_mb").alias("memory_mb"),
+                    col("gpu_count").alias("gpu_count"),
+                    col("cloud").alias("cloud"),
+                    col("region").alias("region"),
+                    col("availability_zones").alias("availability_zones")
+                ).alias("raw_data"),
+                col("cloud"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.compute.node_types").alias("source_file"),
+                sha2(
+                    concat_ws("|",
+                        col("node_type"),
+                        col("cloud"),
+                        col("region"),
+                        col("core_count").cast("string"),
+                        col("memory_mb").cast("string"),
+                        col("gpu_count").cast("string")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            # Write to bronze table
+            node_types_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_node_types")
+            
+            # Update watermark
+            record_count = node_types_bronze.count()
+            if record_count > 0:
+                latest_timestamp = node_types_bronze.select("cloud").orderBy(col("cloud").desc()).limit(1).collect()
+                if latest_timestamp:
+                    self.watermark_manager.update_watermark(
+                        "system.compute.node_types",
+                        "obs.bronze.system_compute_node_types",
+                        "cloud",
+                        latest_timestamp[0]["cloud"],
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0
+                    )
+                    logger.info(f"Updated watermark for compute node types: {latest_timestamp[0]['cloud']}")
+            
+            logger.info(f"Compute node types ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting compute node types: {str(e)}")
+            return False
     
     def _ingest_compute_node_timeline(self) -> bool:
         """Ingest compute node timeline from system table to bronze."""
