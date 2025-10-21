@@ -22,9 +22,13 @@ from datetime import datetime, timedelta
 
 # Add src directory to path
 sys.path.append('/Workspace/Repos/dev/dbr-observe/src')
+sys.path.append('/Workspace/Repos/dev/dbr-observe/src/python')
+sys.path.append('/Workspace/Repos/dev/dbr-observe/src/python/processing')
+sys.path.append('/Workspace/Repos/dev/dbr-observe/src/python/functions')
 
-from python.processing.daily_observability_pipeline import DailyObservabilityPipeline
-from python.functions.watermark_management import WatermarkManager
+# Import with direct path
+from processing.daily_observability_pipeline import DailyObservabilityPipeline
+from functions.watermark_management import WatermarkManager
 
 print("✅ Modules imported successfully")
 
@@ -326,45 +330,45 @@ except Exception as e:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 5.4 Test Specialized Ingestion Classes
+# MAGIC ### 5.4 Test Schema-Specific Ingestion Methods
 
 # COMMAND ----------
 
-# Test individual specialized ingestion classes
-print("🧪 Testing Specialized Ingestion Classes...")
+# Test individual schema ingestion methods
+print("🧪 Testing Schema-Specific Ingestion Methods...")
 
 try:
-    # Test compute ingestion
-    print("🔧 Testing Compute Ingestion...")
-    compute_success = pipeline.bronze_processor.compute_ingestion.ingest_all_compute_tables()
-    print(f"   Compute ingestion: {'✅ Success' if compute_success else '❌ Failed'}")
+    # Test compute schema ingestion
+    print("🔧 Testing Compute Schema Ingestion...")
+    compute_success = pipeline.bronze_processor._ingest_all_compute_tables()
+    print(f"   Compute schema: {'✅ Success' if compute_success else '❌ Failed'}")
     
-    # Test lakeflow ingestion
-    print("🌊 Testing Lakeflow Ingestion...")
-    lakeflow_success = pipeline.bronze_processor.lakeflow_ingestion.ingest_all_lakeflow_tables()
-    print(f"   Lakeflow ingestion: {'✅ Success' if lakeflow_success else '❌ Failed'}")
+    # Test lakeflow schema ingestion
+    print("🌊 Testing Lakeflow Schema Ingestion...")
+    lakeflow_success = pipeline.bronze_processor._ingest_all_lakeflow_tables()
+    print(f"   Lakeflow schema: {'✅ Success' if lakeflow_success else '❌ Failed'}")
     
-    # Test billing ingestion
-    print("💰 Testing Billing Ingestion...")
-    billing_success = pipeline.bronze_processor.billing_ingestion.ingest_all_billing_tables()
-    print(f"   Billing ingestion: {'✅ Success' if billing_success else '❌ Failed'}")
+    # Test billing schema ingestion
+    print("💰 Testing Billing Schema Ingestion...")
+    billing_success = pipeline.bronze_processor._ingest_all_billing_tables()
+    print(f"   Billing schema: {'✅ Success' if billing_success else '❌ Failed'}")
     
-    # Test query ingestion
-    print("🔍 Testing Query Ingestion...")
-    query_success = pipeline.bronze_processor.query_ingestion.ingest_all_query_tables()
-    print(f"   Query ingestion: {'✅ Success' if query_success else '❌ Failed'}")
+    # Test query schema ingestion
+    print("🔍 Testing Query Schema Ingestion...")
+    query_success = pipeline.bronze_processor._ingest_all_query_tables()
+    print(f"   Query schema: {'✅ Success' if query_success else '❌ Failed'}")
     
-    # Test audit ingestion
-    print("🔐 Testing Audit Ingestion...")
-    audit_success = pipeline.bronze_processor.audit_ingestion.ingest_all_audit_tables()
-    print(f"   Audit ingestion: {'✅ Success' if audit_success else '❌ Failed'}")
+    # Test audit schema ingestion
+    print("🔐 Testing Audit Schema Ingestion...")
+    audit_success = pipeline.bronze_processor._ingest_all_audit_tables()
+    print(f"   Audit schema: {'✅ Success' if audit_success else '❌ Failed'}")
     
-    # Test storage ingestion
-    print("💾 Testing Storage Ingestion...")
-    storage_success = pipeline.bronze_processor.storage_ingestion.ingest_all_storage_tables()
-    print(f"   Storage ingestion: {'✅ Success' if storage_success else '❌ Failed'}")
+    # Test storage schema ingestion
+    print("💾 Testing Storage Schema Ingestion...")
+    storage_success = pipeline.bronze_processor._ingest_all_storage_tables()
+    print(f"   Storage schema: {'✅ Success' if storage_success else '❌ Failed'}")
     
-    print("\n📊 Specialized Ingestion Summary:")
+    print("\n📊 Schema-Specific Ingestion Summary:")
     print(f"   🔧 Compute: {'✅' if compute_success else '❌'}")
     print(f"   🌊 Lakeflow: {'✅' if lakeflow_success else '❌'}")
     print(f"   💰 Billing: {'✅' if billing_success else '❌'}")
@@ -373,7 +377,7 @@ try:
     print(f"   💾 Storage: {'✅' if storage_success else '❌'}")
     
 except Exception as e:
-    print(f"❌ Specialized ingestion testing error: {str(e)}")
+    print(f"❌ Schema-specific ingestion testing error: {str(e)}")
 
 # COMMAND ----------
 
