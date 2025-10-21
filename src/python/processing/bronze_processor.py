@@ -236,11 +236,115 @@ class BronzeProcessor:
             logger.error(f"Error in storage tables ingestion: {str(e)}")
             return False
     
-    # Individual ingestion methods (placeholder implementations)
+    # Individual ingestion methods with actual implementation
     def _ingest_compute_clusters(self) -> bool:
         """Ingest compute clusters from system table to bronze."""
-        logger.info("Ingesting compute clusters...")
-        return True
+        try:
+            logger.info("Ingesting compute clusters...")
+            
+            # Get watermark for delta processing
+            watermark = self.watermark_manager.get_watermark(
+                "system.compute.clusters",
+                "obs.bronze.system_compute_clusters", 
+                "change_time"
+            )
+            
+            if watermark is None:
+                watermark = "1900-01-01"
+                logger.info(f"No watermark found, processing from {watermark}")
+            else:
+                logger.info(f"Processing delta from watermark: {watermark}")
+            
+            # Read from system table with watermark filter
+            try:
+                compute_source = self.spark.table("system.compute.clusters") \
+                    .filter(col("change_time") > watermark)
+            except Exception as e:
+                logger.warning(f"System table system.compute.clusters not accessible: {str(e)}")
+                logger.info("Skipping compute clusters ingestion - system table not available")
+                return True  # Return True to avoid failing the entire process
+            
+            # Transform to bronze format with raw_data structure matching exact bronze schema
+            compute_bronze = compute_source.select(
+                # Create raw_data struct matching bronze schema exactly
+                struct(
+                    col("cluster_id").alias("cluster_id"),
+                    col("workspace_id").alias("workspace_id"),
+                    col("cluster_name").alias("name"),
+                    col("owned_by").alias("owner"),
+                    col("driver_node_type").alias("driver_node_type"),
+                    col("worker_node_type").alias("worker_node_type"),
+                    col("worker_count").cast("bigint").alias("worker_count"),
+                    col("min_autoscale_workers").cast("bigint").alias("min_autoscale_workers"),
+                    col("max_autoscale_workers").cast("bigint").alias("max_autoscale_workers"),
+                    col("auto_termination_minutes").cast("bigint").alias("auto_termination_minutes"),
+                    col("enable_elastic_disk").alias("enable_elastic_disk"),
+                    # These columns don't exist in system table, use null values
+                    lit(None).cast("string").alias("data_security_mode"),
+                    lit(None).cast("string").alias("policy_id"),
+                    # dbr_version doesn't exist in system table, use null
+                    lit(None).cast("string").alias("dbr_version"),
+                    col("cluster_source").alias("cluster_source"),
+                    col("tags").alias("tags"),
+                    col("create_time").alias("create_time"),
+                    col("delete_time").alias("delete_time"),
+                    col("change_time").alias("change_time")
+                ).alias("raw_data"),
+                # Bronze layer columns
+                col("workspace_id"),
+                col("change_time"),
+                current_timestamp().alias("ingestion_timestamp"),
+                lit("system.compute.clusters").alias("source_file"),
+                # Generate record hash using available columns
+                sha2(
+                    concat_ws("|",
+                        col("workspace_id"),
+                        col("cluster_id"),
+                        col("cluster_name"),
+                        col("owned_by"),
+                        col("driver_node_type"),
+                        col("worker_node_type"),
+                        col("worker_count").cast("string"),
+                        col("min_autoscale_workers").cast("string"),
+                        col("max_autoscale_workers").cast("string"),
+                        col("auto_termination_minutes").cast("string"),
+                        col("enable_elastic_disk").cast("string"),
+                        lit("").alias("data_security_mode"),
+                        lit("").alias("policy_id"),
+                        lit("").alias("dbr_version"),
+                        col("cluster_source"),
+                        col("tags").cast("string")
+                    ), 256
+                ).alias("record_hash"),
+                lit(False).alias("is_deleted")
+            )
+            
+            # Write to bronze table with mergeSchema option
+            compute_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_clusters")
+            
+            # Update watermark if data was processed
+            record_count = compute_bronze.count()
+            if record_count > 0:
+                latest_timestamp = compute_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
+                if latest_timestamp:
+                    self.watermark_manager.update_watermark(
+                        "system.compute.clusters",
+                        "obs.bronze.system_compute_clusters",
+                        "change_time",
+                        latest_timestamp[0]["change_time"].isoformat(),
+                        "SUCCESS",
+                        None,
+                        record_count,
+                        0  # Duration would be calculated
+                    )
+                    logger.info(f"Updated watermark for compute clusters: {latest_timestamp[0]['change_time']}")
+            
+            logger.info(f"Compute clusters ingested successfully - {record_count} records")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting compute clusters: {str(e)}")
+            return False
     
     def _ingest_compute_warehouses(self) -> bool:
         """Ingest compute warehouses from system table to bronze."""

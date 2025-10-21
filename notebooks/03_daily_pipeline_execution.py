@@ -188,7 +188,8 @@ try:
             print(f"   🔐 Audit Schema:")
             print(f"      - system_audit_log: {audit_log_count} rows")
         except Exception as e:
-            print(f"   🔐 Audit Schema: Error - {str(e)}")
+            print(f"   🔐 Audit Schema: Table not found - {str(e)}")
+            print(f"      - system_audit_log: Table does not exist (may not be created yet)")
         
         # Storage schema tables
         try:
@@ -218,6 +219,30 @@ except Exception as e:
     print(f"❌ Bronze data loading error: {str(e)}")
     print("ℹ️  This may be expected if system tables don't exist or have permission issues")
     print("ℹ️  Make sure you have access to system.compute.clusters and system.lakeflow.jobs tables")
+    
+    # Check if system tables exist
+    print("\n🔍 Checking System Table Availability:")
+    system_tables = [
+        "system.compute.clusters",
+        "system.lakeflow.jobs", 
+        "system.billing.usage",
+        "system.query.history",
+        "system.access.audit_log",
+        "system.storage.ops"
+    ]
+    
+    for table in system_tables:
+        try:
+            df = spark.table(table)
+            count = df.count()
+            print(f"✅ {table}: {count} rows available")
+        except Exception as table_error:
+            print(f"❌ {table}: {str(table_error)}")
+    
+    print("\n💡 If system tables are not accessible:")
+    print("   - Check your Databricks workspace permissions")
+    print("   - Ensure you're running on a cluster with system table access")
+    print("   - Some system tables may not be available in all workspaces")
 
 # COMMAND ----------
 
