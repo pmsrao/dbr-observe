@@ -163,7 +163,7 @@ class TagExtractor:
                 "tag_count",
                 when(col(tags_column).isNotNull(), 
                      when(map_keys(col(tags_column)).isNotNull(), 
-                          size(map_keys(col(tags_column)))
+                          size(map_keys(col(tags_column))))
                      .otherwise(0))
                 .otherwise(0)
             )

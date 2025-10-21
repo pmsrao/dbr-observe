@@ -2,7 +2,7 @@
 
 A comprehensive observability solution for Databricks workloads, providing cost allocation, performance monitoring, and governance capabilities.
 
-> **📚 Documentation Navigation**: [Architecture & Design](docs/architecture.md) | [Database Best Practices](docs/database_best_practices.md) | [Tag Extraction Strategy](docs/tag_extraction_strategy.md) | [Configuration Guide](docs/config_folder_guide.md) | [Deployment Guide](docs/deployment_guide.md)
+> **📚 Documentation Navigation**: [Architecture & Design](docs/architecture.md) | [Database Best Practices](docs/database_best_practices.md) | [Tag Extraction Strategy](docs/tag_extraction_strategy.md) | [Configuration Guide](docs/config_folder_guide.md) | [Deployment Guide](docs/deployment_guide.md) | [Daily Job Testing Guide](docs/daily_job_testing_guide.md) | [Project Summary](docs/project_summary.md)
 
 ## 🎯 **Solution Overview**
 
@@ -76,6 +76,11 @@ dbr-observe/
 │   ├── tag_extraction_strategy.md  # Tag extraction strategy
 │   └── config_folder_guide.md      # Configuration folder guide
 ├── scripts/                        # Deployment and utility scripts
+├── notebooks/                       # Databricks testing notebooks
+│   ├── 01_observability_platform_testing.py  # Comprehensive testing
+│   ├── 02_quick_testing.py         # Quick health checks
+│   ├── 03_daily_pipeline_execution.py        # Pipeline testing
+│   └── README.md                   # Notebook usage guide
 └── .cursor/                        # Cursor IDE configuration
 ```
 
@@ -143,6 +148,30 @@ from src.python.functions.tag_extraction import extract_standard_tags
 watermark = get_watermark(spark, "system.compute.clusters", "obs.silver.compute_entities", "change_time")
 ```
 
+### Phase 3: Testing in Databricks
+
+#### 1. Comprehensive Testing (30-45 minutes)
+```python
+# Run: notebooks/01_observability_platform_testing.py
+# Tests all components: environment, tables, functions, processing, quality
+```
+
+#### 2. Quick Health Check (5-10 minutes)
+```python
+# Run: notebooks/02_quick_testing.py  
+# Fast verification of core functionality
+```
+
+#### 3. Pipeline Execution Testing (15-30 minutes)
+```python
+# Run: notebooks/03_daily_pipeline_execution.py
+# End-to-end pipeline testing and production readiness
+```
+
+#### 4. Notebook Usage
+- **Update Repository Path**: Change `/Workspace/Repos/your-username/dbr-observe/src` to your actual path
+- **Run in Order**: Start with comprehensive testing, then quick checks, then pipeline testing
+- **Monitor Results**: Check watermark status, data quality, and performance metrics
 
 ## 🔧 Technology Stack
 

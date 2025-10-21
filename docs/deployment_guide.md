@@ -138,6 +138,31 @@ watermark = get_watermark(spark, "system.compute.clusters", "obs.silver.compute_
 - Operational tags (environment, team, project)
 - PySpark tag extraction with variations support
 
+## 🧪 **Testing & Debugging**
+
+### **Quick Testing Commands**
+```bash
+# Check all prerequisites
+./scripts/quick_test.sh check-all
+
+# Test individual components
+./scripts/quick_test.sh test-watermark
+./scripts/quick_test.sh test-scd2
+./scripts/quick_test.sh test-tags
+./scripts/quick_test.sh test-bronze
+./scripts/quick_test.sh test-silver
+./scripts/quick_test.sh test-metrics
+./scripts/quick_test.sh test-full
+
+# Or use Python script directly
+python scripts/test_daily_pipeline.py --component watermark
+python scripts/test_daily_pipeline.py --check-tables
+python scripts/test_daily_pipeline.py --check-data
+```
+
+### **Step-by-Step Testing**
+For detailed testing instructions, see [Daily Job Testing Guide](daily_job_testing_guide.md).
+
 ## 📚 **Documentation**
 
 - [README](README.md) - Main project overview
@@ -145,6 +170,7 @@ watermark = get_watermark(spark, "system.compute.clusters", "obs.silver.compute_
 - [Database Best Practices](database_best_practices.md) - Naming standards
 - [Tag Extraction Strategy](tag_extraction_strategy.md) - Tag processing
 - [Configuration Guide](config_folder_guide.md) - Config management
+- [Daily Job Testing Guide](daily_job_testing_guide.md) - Step-by-step testing
 
 ## 🎯 **Success Criteria**
 
