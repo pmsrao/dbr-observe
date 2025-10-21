@@ -113,139 +113,37 @@ else:
 
 # COMMAND ----------
 
-# Load sample data into bronze tables for testing
-print("🔄 Loading Sample Data into Bronze Tables...")
+# Load data from system tables into bronze tables using pipeline
+print("🔄 Loading Data from System Tables into Bronze Tables...")
 
 try:
-    # Create sample compute clusters data
-    sample_compute_data = [
-        {
-            "raw_data": {
-                "cluster_id": "test-cluster-001",
-                "workspace_id": "test-workspace",
-                "name": "Test Cluster 1",
-                "owner": "test@example.com",
-                "driver_node_type": "i3.xlarge",
-                "worker_node_type": "i3.large",
-                "worker_count": 2,
-                "min_autoscale_workers": 1,
-                "max_autoscale_workers": 4,
-                "auto_termination_minutes": 60,
-                "enable_elastic_disk": True,
-                "data_security_mode": "SINGLE_USER",
-                "policy_id": "test-policy-001",
-                "dbr_version": "13.3.x-scala2.12",
-                "cluster_source": "UI",
-                "tags": {"environment": "test", "team": "data-platform"},
-                "create_time": "2024-12-01T10:00:00Z",
-                "delete_time": None,
-                "change_time": "2024-12-01T10:00:00Z"
-            },
-            "workspace_id": "test-workspace",
-            "change_time": "2024-12-01T10:00:00Z",
-            "ingestion_timestamp": "2024-12-01T10:00:00Z",
-            "source_file": "test_compute_clusters.json",
-            "record_hash": "test-hash-001",
-            "is_deleted": False
-        },
-        {
-            "raw_data": {
-                "cluster_id": "test-cluster-002",
-                "workspace_id": "test-workspace",
-                "name": "Test Cluster 2",
-                "owner": "test@example.com",
-                "driver_node_type": "i3.2xlarge",
-                "worker_node_type": "i3.xlarge",
-                "worker_count": 4,
-                "min_autoscale_workers": 2,
-                "max_autoscale_workers": 8,
-                "auto_termination_minutes": 120,
-                "enable_elastic_disk": False,
-                "data_security_mode": "MULTI_USER",
-                "policy_id": "test-policy-002",
-                "dbr_version": "14.0.x-scala2.12",
-                "cluster_source": "API",
-                "tags": {"environment": "prod", "team": "data-platform"},
-                "create_time": "2024-12-01T11:00:00Z",
-                "delete_time": None,
-                "change_time": "2024-12-01T11:00:00Z"
-            },
-            "workspace_id": "test-workspace",
-            "change_time": "2024-12-01T11:00:00Z",
-            "ingestion_timestamp": "2024-12-01T11:00:00Z",
-            "source_file": "test_compute_clusters.json",
-            "record_hash": "test-hash-002",
-            "is_deleted": False
-        }
-    ]
+    # Use the pipeline's system to bronze processing method
+    success = pipeline.process_system_to_bronze()
     
-    # Create sample lakeflow jobs data
-    sample_lakeflow_data = [
-        {
-            "raw_data": {
-                "job_id": "test-job-001",
-                "workspace_id": "test-workspace",
-                "name": "Test Job 1",
-                "description": "Test workflow job",
-                "creator_id": "test@example.com",
-                "run_as": "test@example.com",
-                "job_parameters": {"param1": "value1", "param2": "value2"},
-                "tags": {"environment": "test", "team": "data-platform"},
-                "create_time": "2024-12-01T10:30:00Z",
-                "delete_time": None,
-                "change_time": "2024-12-01T10:30:00Z"
-            },
-            "workspace_id": "test-workspace",
-            "change_time": "2024-12-01T10:30:00Z",
-            "ingestion_timestamp": "2024-12-01T10:30:00Z",
-            "source_file": "test_lakeflow_jobs.json",
-            "record_hash": "test-job-hash-001",
-            "is_deleted": False
-        },
-        {
-            "raw_data": {
-                "job_id": "test-job-002",
-                "workspace_id": "test-workspace",
-                "name": "Test Job 2",
-                "description": "Another test workflow job",
-                "creator_id": "test@example.com",
-                "run_as": "test@example.com",
-                "job_parameters": {"param3": "value3", "param4": "value4"},
-                "tags": {"environment": "prod", "team": "data-platform"},
-                "create_time": "2024-12-01T11:30:00Z",
-                "delete_time": None,
-                "change_time": "2024-12-01T11:30:00Z"
-            },
-            "workspace_id": "test-workspace",
-            "change_time": "2024-12-01T11:30:00Z",
-            "ingestion_timestamp": "2024-12-01T11:30:00Z",
-            "source_file": "test_lakeflow_jobs.json",
-            "record_hash": "test-job-hash-002",
-            "is_deleted": False
-        }
-    ]
-    
-    # Load compute clusters data
-    compute_df = spark.createDataFrame(sample_compute_data)
-    compute_df.write.mode("append").saveAsTable("obs.bronze.system_compute_clusters")
-    print("✅ Loaded sample compute clusters data")
-    
-    # Load lakeflow jobs data
-    lakeflow_df = spark.createDataFrame(sample_lakeflow_data)
-    lakeflow_df.write.mode("append").saveAsTable("obs.bronze.system_lakeflow_jobs")
-    print("✅ Loaded sample lakeflow jobs data")
-    
-    # Verify data was loaded
-    compute_count = spark.table("obs.bronze.system_compute_clusters").count()
-    lakeflow_count = spark.table("obs.bronze.system_lakeflow_jobs").count()
-    
-    print(f"📊 Bronze table counts:")
-    print(f"   - system_compute_clusters: {compute_count} rows")
-    print(f"   - system_lakeflow_jobs: {lakeflow_count} rows")
-    
+    if success:
+        print("✅ System to Bronze processing completed successfully")
+        
+        # Verify data was loaded
+        compute_count = spark.table("obs.bronze.system_compute_clusters").count()
+        lakeflow_count = spark.table("obs.bronze.system_lakeflow_jobs").count()
+        
+        print(f"📊 Bronze table counts:")
+        print(f"   - system_compute_clusters: {compute_count} rows")
+        print(f"   - system_lakeflow_jobs: {lakeflow_count} rows")
+        
+        # Show sample of loaded data
+        print("📋 Sample compute clusters data:")
+        spark.table("obs.bronze.system_compute_clusters").select("workspace_id", "raw_data.name", "raw_data.owner", "change_time").show(5, False)
+        
+        print("📋 Sample lakeflow jobs data:")
+        spark.table("obs.bronze.system_lakeflow_jobs").select("workspace_id", "raw_data.name", "raw_data.creator_id", "change_time").show(5, False)
+    else:
+        print("❌ System to Bronze processing failed")
+        
 except Exception as e:
     print(f"❌ Bronze data loading error: {str(e)}")
-    print("ℹ️  This may be expected if tables don't exist or have permission issues")
+    print("ℹ️  This may be expected if system tables don't exist or have permission issues")
+    print("ℹ️  Make sure you have access to system.compute.clusters and system.lakeflow.jobs tables")
 
 # COMMAND ----------
 
