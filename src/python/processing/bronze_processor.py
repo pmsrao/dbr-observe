@@ -835,12 +835,12 @@ class BronzeProcessor:
             logger.info("Ingesting billing list prices...")
             print("🔄 DEBUG: Starting billing list prices ingestion...")
             
-            # Get watermark for delta processing
-            watermark = self.watermark_manager.get_watermark(
-                "system.billing.list_prices",
-                "obs.bronze.system_billing_list_prices", 
-                "effective_date"
-            )
+                # Get watermark for delta processing
+                watermark = self.watermark_manager.get_watermark(
+                    "system.billing.list_prices",
+                    "obs.bronze.system_billing_list_prices", 
+                    "price_start_time"
+                )
             
             if watermark is None:
                 watermark = "1900-01-01"
@@ -850,10 +850,10 @@ class BronzeProcessor:
                 logger.info(f"Processing delta from watermark: {watermark}")
                 print(f"🔄 DEBUG: Processing delta from watermark: {watermark}")
             
-            # Read from system table with watermark filter
-            try:
-                prices_source = self.spark.table("system.billing.list_prices") \
-                    .filter(col("effective_date") > watermark)
+                # Read from system table with watermark filter
+                try:
+                    prices_source = self.spark.table("system.billing.list_prices") \
+                        .filter(col("price_start_time") > watermark)
                 print(f"🔄 DEBUG: Read from system.billing.list_prices, checking record count...")
                 source_count = prices_source.count()
                 print(f"🔄 DEBUG: Source table has {source_count} records after watermark filter")
@@ -874,20 +874,20 @@ class BronzeProcessor:
                 struct(
                     col("sku_name").alias("sku_name"),
                     col("cloud").alias("cloud"),
-                    col("effective_date").alias("effective_date"),
+                    col("price_start_time").alias("effective_date"),
                     col("unit_price").alias("unit_price"),
                     col("currency").alias("currency"),
                     col("unit").alias("unit")
                 ).alias("raw_data"),
                 col("cloud"),
-                col("effective_date"),
+                col("price_start_time"),
                 current_timestamp().alias("ingestion_timestamp"),
                 lit("system.billing.list_prices").alias("source_file"),
                 sha2(
                     concat_ws("|",
                         col("sku_name"),
                         col("cloud"),
-                        col("effective_date").cast("string"),
+                        col("price_start_time").cast("string"),
                         col("unit_price").cast("string"),
                         col("currency"),
                         col("unit")
@@ -904,14 +904,14 @@ class BronzeProcessor:
             record_count = prices_bronze.count()
             print(f"🔄 DEBUG: Written {record_count} records to bronze table")
             if record_count > 0:
-                latest_timestamp = prices_bronze.select("effective_date").orderBy(col("effective_date").desc()).limit(1).collect()
+                latest_timestamp = prices_bronze.select("price_start_time").orderBy(col("price_start_time").desc()).limit(1).collect()
                 if latest_timestamp:
                     # Convert timestamp to string for watermark
-                    watermark_value = str(latest_timestamp[0]["effective_date"])
+                    watermark_value = str(latest_timestamp[0]["price_start_time"])
                     self.watermark_manager.update_watermark(
                         "system.billing.list_prices",
                         "obs.bronze.system_billing_list_prices",
-                        "effective_date",
+                        "price_start_time",
                         watermark_value,
                         "SUCCESS",
                         None,
@@ -1083,10 +1083,10 @@ class BronzeProcessor:
             audit_bronze = audit_source.select(
                 struct(
                     col("event_time").alias("timestamp"),
-                    col("user_identity").alias("user_identity"),
+                    col("user_identity").cast("string").alias("user_identity"),
                     col("action_name").alias("action"),
                     col("request_id").alias("resource"),
-                    col("response").alias("result"),
+                    col("response").cast("string").alias("result"),
                     col("workspace_id").alias("workspace_id")
                 ).alias("raw_data"),
                 col("workspace_id"),
