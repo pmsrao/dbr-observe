@@ -764,7 +764,7 @@ class BronzeProcessor:
                     col("usage_end_time").alias("usage_end_time"),
                     col("usage_date").alias("usage_date"),
                     col("usage_unit").alias("usage_unit"),
-                    col("usage_quantity").cast("double").alias("usage_quantity"),  # Cast to double to avoid decimal precision issues
+                    col("usage_quantity").cast("decimal(18,6)").alias("usage_quantity"),  # Match bronze table schema
                     col("usage_type").alias("usage_type"),
                     col("record_type").alias("record_type")
                 ).alias("raw_data"),
@@ -1096,10 +1096,10 @@ class BronzeProcessor:
                 sha2(
                     concat_ws("|",
                         col("event_time").cast("string"),
-                        col("user_identity"),
+                        col("user_identity").cast("string"),  # Convert STRUCT to string
                         col("action_name"),
                         col("request_id"),
-                        col("response"),
+                        col("response").cast("string"),  # Convert STRUCT to string
                         col("workspace_id")
                     ), 256
                 ).alias("record_hash"),

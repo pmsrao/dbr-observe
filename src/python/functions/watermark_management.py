@@ -121,51 +121,64 @@ class WatermarkManager:
             print(f"🔄 DEBUG: Updating watermark - {source_table} -> {target_table}: {watermark_str}")
             print(f"🔄 DEBUG: Records: {records_int}, Duration: {duration_int}, Status: {status_str}")
             
-            # Create new watermark record with explicit schema
+            # Use SQL INSERT instead of DataFrame creation to avoid type inference issues
             try:
-                new_record = self.spark.createDataFrame([{
-                    "source_table_name": str(source_table),
-                    "target_table_name": str(target_table),
-                    "watermark_column": str(watermark_column),
-                    "watermark_value": watermark_str,
-                    "last_updated": current_timestamp(),
-                    "processing_status": status_str,
-                    "error_message": error_str,
-                    "records_processed": records_int,
-                    "processing_duration_ms": duration_int,
-                    "created_by": "pyspark",
-                    "created_at": current_timestamp(),
-                    "updated_by": "pyspark",
-                    "updated_at": current_timestamp()
-                }], schema=self.watermark_schema)
+                # Escape single quotes in string values
+                watermark_escaped = watermark_str.replace("'", "''")
+                error_escaped = error_str.replace("'", "''") if error_str else "NULL"
                 
-                print(f"🔄 DEBUG: DataFrame created successfully")
+                insert_sql = f"""
+                INSERT INTO {self.watermarks_table} 
+                (source_table_name, target_table_name, watermark_column, watermark_value, 
+                 last_updated, processing_status, error_message, records_processed, 
+                 processing_duration_ms, created_by, created_at, updated_by, updated_at)
+                VALUES (
+                    '{str(source_table)}',
+                    '{str(target_table)}',
+                    '{str(watermark_column)}',
+                    '{watermark_escaped}',
+                    current_timestamp(),
+                    '{status_str}',
+                    {f"'{error_escaped}'" if error_str else "NULL"},
+                    {records_int},
+                    {duration_int},
+                    'pyspark',
+                    current_timestamp(),
+                    'pyspark',
+                    current_timestamp()
+                )
+                """
                 
-                # Insert new record
-                new_record.write.mode("append").saveAsTable(self.watermarks_table)
-                print(f"✅ DEBUG: Watermark record inserted successfully")
+                print(f"🔄 DEBUG: Executing SQL insert...")
+                self.spark.sql(insert_sql)
+                print(f"✅ DEBUG: Watermark record inserted successfully via SQL")
                 
-            except Exception as df_error:
-                print(f"❌ DEBUG: DataFrame creation error: {str(df_error)}")
-                # Try without explicit schema as fallback
-                new_record = self.spark.createDataFrame([{
-                    "source_table_name": str(source_table),
-                    "target_table_name": str(target_table),
-                    "watermark_column": str(watermark_column),
-                    "watermark_value": watermark_str,
-                    "last_updated": current_timestamp(),
-                    "processing_status": status_str,
-                    "error_message": error_str,
-                    "records_processed": records_int,
-                    "processing_duration_ms": duration_int,
-                    "created_by": "pyspark",
-                    "created_at": current_timestamp(),
-                    "updated_by": "pyspark",
-                    "updated_at": current_timestamp()
-                }])
-                
-                new_record.write.mode("append").saveAsTable(self.watermarks_table)
-                print(f"✅ DEBUG: Watermark record inserted with fallback method")
+            except Exception as sql_error:
+                print(f"❌ DEBUG: SQL insert error: {str(sql_error)}")
+                # Fallback to DataFrame creation without schema
+                try:
+                    new_record = self.spark.createDataFrame([{
+                        "source_table_name": str(source_table),
+                        "target_table_name": str(target_table),
+                        "watermark_column": str(watermark_column),
+                        "watermark_value": watermark_str,
+                        "last_updated": current_timestamp(),
+                        "processing_status": status_str,
+                        "error_message": error_str,
+                        "records_processed": records_int,
+                        "processing_duration_ms": duration_int,
+                        "created_by": "pyspark",
+                        "created_at": current_timestamp(),
+                        "updated_by": "pyspark",
+                        "updated_at": current_timestamp()
+                    }])
+                    
+                    new_record.write.mode("append").saveAsTable(self.watermarks_table)
+                    print(f"✅ DEBUG: Watermark record inserted with DataFrame fallback")
+                    
+                except Exception as df_error:
+                    print(f"❌ DEBUG: DataFrame fallback also failed: {str(df_error)}")
+                    raise df_error
             
             logger.info(f"Updated watermark for {source_table} -> {target_table}: {watermark_value}")
             return True
