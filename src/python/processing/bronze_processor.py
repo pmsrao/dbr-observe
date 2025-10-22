@@ -10,7 +10,7 @@ Date: December 2024
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, current_timestamp, lit, sha2, concat_ws, struct
+from pyspark.sql.functions import col, current_timestamp, lit, sha2, concat_ws, struct, coalesce
 import logging
 
 logger = logging.getLogger(__name__)
@@ -487,30 +487,27 @@ class BronzeProcessor:
         """Ingest compute node types from system table to bronze."""
         try:
             logger.info("Ingesting compute node types...")
+            print("🔄 DEBUG: Starting compute node types ingestion...")
             
-            # Get watermark for delta processing
-            watermark = self.watermark_manager.get_watermark(
-                "system.compute.node_types",
-                "obs.bronze.system_compute_node_types", 
-                "node_type"
-            )
-            
-            if watermark is None:
-                watermark = "1900-01-01"
-                logger.info(f"No watermark found, processing from {watermark}")
-            else:
-                logger.info(f"Processing delta from watermark: {watermark}")
-            
-            # Read from system table with watermark filter
+            # Read from system table (no watermark needed for reference table)
             try:
-                node_types_source = self.spark.table("system.compute.node_types") \
-                    .filter(col("node_type") > watermark)
+                node_types_source = self.spark.table("system.compute.node_types")
+                print(f"🔄 DEBUG: Read from system.compute.node_types, checking record count...")
+                source_count = node_types_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records")
             except Exception as e:
                 logger.warning(f"System table system.compute.node_types not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.compute.node_types not accessible: {str(e)}")
                 logger.info("Skipping compute node types ingestion - system table not available")
                 return True
             
+            if source_count == 0:
+                print("ℹ️ DEBUG: No records to process")
+                logger.info("No compute node types records to process")
+                return True
+            
             # Transform to bronze format
+            print("🔄 DEBUG: Transforming data to bronze format...")
             node_types_bronze = node_types_source.select(
                 struct(
                     col("node_type").alias("node_type"),
@@ -536,33 +533,21 @@ class BronzeProcessor:
                 lit(False).alias("is_deleted")
             )
             
+            print("🔄 DEBUG: Writing to bronze table...")
             # Write to bronze table
             node_types_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_node_types")
             
-            # Update watermark
+            # No watermark needed for reference table
             record_count = node_types_bronze.count()
-            if record_count > 0:
-                latest_node_type = node_types_bronze.select("node_type").orderBy(col("node_type").desc()).limit(1).collect()
-                if latest_node_type:
-                    # Convert node_type to string for watermark
-                    watermark_value = str(latest_node_type[0]["node_type"])
-                    self.watermark_manager.update_watermark(
-                        "system.compute.node_types",
-                        "obs.bronze.system_compute_node_types",
-                        "node_type",
-                        watermark_value,
-                        "SUCCESS",
-                        None,
-                        record_count,
-                        0
-                    )
-                    logger.info(f"Updated watermark for compute node types: {watermark_value}")
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
             
             logger.info(f"Compute node types ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Compute node types ingested successfully - {record_count} records")
             return True
             
         except Exception as e:
             logger.error(f"Error ingesting compute node types: {str(e)}")
+            print(f"❌ DEBUG: Error ingesting compute node types: {str(e)}")
             return False
     
     def _ingest_compute_node_timeline(self) -> bool:
@@ -874,7 +859,7 @@ class BronzeProcessor:
                     col("sku_name").alias("sku_name"),
                     col("cloud").alias("cloud"),
                     col("price_start_time").alias("effective_date"),
-                    col("pricing").cast("string").alias("list_price"),
+                    coalesce(col("pricing.default"), lit(0.0)).cast("decimal(18,6)").alias("list_price"),
                     col("currency_code").alias("currency_code"),
                     col("usage_unit").alias("usage_unit")
                 ).alias("raw_data"),
@@ -886,7 +871,7 @@ class BronzeProcessor:
                         col("sku_name"),
                         col("cloud"),
                         col("price_start_time").cast("string"),
-                        col("pricing").cast("string"),
+                        coalesce(col("pricing.default"), lit(0.0)).cast("string"),
                         col("currency_code"),
                         col("usage_unit")
                     ), 256
