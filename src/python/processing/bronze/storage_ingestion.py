@@ -43,8 +43,9 @@ class StorageIngestion:
             
             success = True
             
-            if not self.ingest_storage_ops():
-                success = False
+            # Skip storage operations - table doesn't exist in this workspace
+            logger.info("Skipping storage operations - system.storage.ops table not available")
+            print("ℹ️ DEBUG: Skipping storage operations - system.storage.ops table not available")
             
             if success:
                 logger.info("Storage tables ingestion completed successfully")
