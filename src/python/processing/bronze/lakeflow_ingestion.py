@@ -275,7 +275,7 @@ class LakeflowIngestion:
                     col("result_state").alias("result_state"),
                     col("termination_code").alias("termination_code"),
                     col("job_parameters").alias("job_parameters"),
-                    col("parent_run_id").alias("parent_run_id")
+                    lit(None).cast("string").alias("parent_run_id")
                 ).alias("raw_data"),
                 # Bronze layer columns
                 col("workspace_id"),
@@ -332,7 +332,7 @@ class LakeflowIngestion:
             watermark = self.watermark_manager.get_watermark(
                 "system.lakeflow.job_task_run_timeline",
                 "obs.bronze.system_lakeflow_job_task_run_timeline", 
-                "start_time"
+                "period_start_time"
             )
             
             if watermark is None:
@@ -343,7 +343,7 @@ class LakeflowIngestion:
             
             # Read from system table with watermark filter
             task_runs_source = self.spark.table("system.lakeflow.job_task_run_timeline") \
-                .filter(col("start_time") > watermark)
+                .filter(col("period_start_time") > watermark)
             
             # Transform to bronze format with raw_data structure matching exact bronze schema
             task_runs_bronze = task_runs_source.select(
@@ -353,15 +353,15 @@ class LakeflowIngestion:
                     col("job_id").alias("job_id"),
                     col("run_id").alias("run_id"),
                     col("task_key").alias("task_key"),
-                    col("start_time").alias("start_time"),
-                    col("end_time").alias("end_time"),
+                    col("period_start_time").alias("start_time"),
+                    col("period_end_time").alias("end_time"),
                     col("result_state").alias("result_state"),
                     col("termination_code").alias("termination_code"),
                     col("task_parameters").alias("task_parameters")
                 ).alias("raw_data"),
                 # Bronze layer columns
                 col("workspace_id"),
-                col("start_time"),
+                col("period_start_time"),
                 current_timestamp().alias("ingestion_timestamp"),
                 lit("system.lakeflow.job_task_run_timeline").alias("source_file"),
                 # Generate record hash using available columns
@@ -371,8 +371,8 @@ class LakeflowIngestion:
                         col("job_id"),
                         col("run_id"),
                         col("task_key"),
-                        col("start_time").cast("string"),
-                        col("end_time").cast("string"),
+                        col("period_start_time").cast("string"),
+                        col("period_end_time").cast("string"),
                         col("result_state")
                     ), 256
                 ).alias("record_hash"),
@@ -385,13 +385,13 @@ class LakeflowIngestion:
             # Update watermark if data was processed
             record_count = task_runs_bronze.count()
             if record_count > 0:
-                latest_timestamp = task_runs_bronze.select("start_time").orderBy(col("start_time").desc()).limit(1).collect()
+                latest_timestamp = task_runs_bronze.select("period_start_time").orderBy(col("period_start_time").desc()).limit(1).collect()
                 if latest_timestamp:
                     self.watermark_manager.update_watermark(
                         "system.lakeflow.job_task_run_timeline",
                         "obs.bronze.system_lakeflow_job_task_run_timeline",
-                        "start_time",
-                        latest_timestamp[0]["start_time"].isoformat(),
+                        "period_start_time",
+                        latest_timestamp[0]["period_start_time"].isoformat(),
                         "SUCCESS",
                         None,
                         record_count,

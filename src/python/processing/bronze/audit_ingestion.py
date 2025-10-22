@@ -113,7 +113,7 @@ class AuditIngestion:
                         col("event_time").cast("string"),
                         col("service_name"),
                         col("action_name"),
-                        col("response"),
+                        col("response").cast("string"),
                         col("user_identity"),
                         col("source_ip_address")
                     ), 256
