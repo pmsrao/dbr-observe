@@ -114,7 +114,7 @@ class AuditIngestion:
                         col("service_name"),
                         col("action_name"),
                         col("response").cast("string"),
-                        col("user_identity"),
+                        col("user_identity").cast("string"),
                         col("source_ip_address")
                     ), 256
                 ).alias("record_hash"),

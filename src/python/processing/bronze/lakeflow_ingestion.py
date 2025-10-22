@@ -274,7 +274,7 @@ class LakeflowIngestion:
                     col("period_end_time").alias("end_time"),
                     col("result_state").alias("result_state"),
                     col("termination_code").alias("termination_code"),
-                    col("job_parameters").alias("job_parameters"),
+                    col("job_parameters").cast("map<string,string>").alias("job_parameters"),
                     lit(None).cast("string").alias("parent_run_id")
                 ).alias("raw_data"),
                 # Bronze layer columns
@@ -357,7 +357,7 @@ class LakeflowIngestion:
                     col("period_end_time").alias("end_time"),
                     col("result_state").alias("result_state"),
                     col("termination_code").alias("termination_code"),
-                    col("task_parameters").alias("task_parameters")
+                    lit(None).cast("map<string,string>").alias("task_parameters")
                 ).alias("raw_data"),
                 # Bronze layer columns
                 col("workspace_id"),
