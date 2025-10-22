@@ -76,8 +76,14 @@ class StorageIngestion:
                 logger.info(f"Processing delta from watermark: {watermark}")
             
             # Read from system table with watermark filter
-            storage_source = self.spark.table("system.storage.ops") \
-                .filter(col("start_time") > watermark)
+            try:
+                storage_source = self.spark.table("system.storage.ops") \
+                    .filter(col("start_time") > watermark)
+            except Exception as e:
+                logger.warning(f"System table system.storage.ops not accessible: {str(e)}")
+                print(f"ℹ️ DEBUG: System table system.storage.ops does not exist in this workspace")
+                logger.info("Skipping storage operations ingestion - system table not available")
+                return True
             
             # Transform to bronze format with raw_data structure matching exact bronze schema
             storage_bronze = storage_source.select(

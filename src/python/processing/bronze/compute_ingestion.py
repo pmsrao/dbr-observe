@@ -450,7 +450,7 @@ class ComputeIngestion:
                     col("event_type").alias("event_type"),
                     col("event_time").alias("event_time"),
                     col("cluster_count").alias("cluster_count"),
-                    lit(None).cast("string").alias("details")
+                    lit(None).cast("map<string,string>").alias("details")
                 ).alias("raw_data"),
                 # Bronze layer columns
                 col("workspace_id"),
