@@ -64,9 +64,9 @@ class AuditIngestion:
             
             # Get watermark for delta processing
             watermark = self.watermark_manager.get_watermark(
-                "system.access.audit_log",
-                "obs.bronze.system_audit_log", 
-                "timestamp"
+                "system.access.audit",
+                "obs.bronze.system_access_audit", 
+                "event_time"
             )
             
             if watermark is None:
@@ -76,8 +76,8 @@ class AuditIngestion:
                 logger.info(f"Processing delta from watermark: {watermark}")
             
             # Read from system table with watermark filter
-            audit_source = self.spark.table("system.access.audit_log") \
-                .filter(col("timestamp") > watermark)
+            audit_source = self.spark.table("system.access.audit") \
+                .filter(col("event_time") > watermark)
             
             # Transform to bronze format with raw_data structure matching exact bronze schema
             audit_bronze = audit_source.select(
@@ -85,10 +85,10 @@ class AuditIngestion:
                 struct(
                     col("request_id").alias("request_id"),
                     col("workspace_id").alias("workspace_id"),
-                    col("timestamp").alias("timestamp"),
+                    col("event_time").alias("timestamp"),
                     col("service_name").alias("service_name"),
                     col("action_name").alias("action_name"),
-                    col("result").alias("result"),
+                    col("response").alias("result"),
                     col("user_identity").alias("user_identity"),
                     col("user_agent").alias("user_agent"),
                     col("source_ip_address").alias("source_ip_address"),
@@ -96,21 +96,21 @@ class AuditIngestion:
                     col("response").alias("response"),
                     col("version").alias("version"),
                     col("account_id").alias("account_id"),
-                    col("request_context").alias("request_context"),
+                    lit(None).cast("string").alias("request_context"),
                     col("session_id").alias("session_id"),
-                    col("change_time").alias("change_time")
+                    lit(None).cast("timestamp").alias("change_time")
                 ).alias("raw_data"),
                 # Bronze layer columns
                 col("workspace_id"),
-                col("timestamp"),
+                col("event_time"),
                 current_timestamp().alias("ingestion_timestamp"),
-                lit("system.access.audit_log").alias("source_file"),
+                lit("system.access.audit").alias("source_file"),
                 # Generate record hash using available columns
                 sha2(
                     concat_ws("|",
                         col("request_id"),
                         col("workspace_id"),
-                        col("timestamp").cast("string"),
+                        col("event_time").cast("string"),
                         col("service_name"),
                         col("action_name"),
                         col("result"),
@@ -122,24 +122,24 @@ class AuditIngestion:
             )
             
             # Write to bronze table with mergeSchema option
-            audit_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_audit_log")
+            audit_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_access_audit")
             
             # Update watermark if data was processed
             record_count = audit_bronze.count()
             if record_count > 0:
-                latest_timestamp = audit_bronze.select("timestamp").orderBy(col("timestamp").desc()).limit(1).collect()
+                latest_timestamp = audit_bronze.select("event_time").orderBy(col("event_time").desc()).limit(1).collect()
                 if latest_timestamp:
                     self.watermark_manager.update_watermark(
-                        "system.access.audit_log",
-                        "obs.bronze.system_audit_log",
-                        "timestamp",
-                        latest_timestamp[0]["timestamp"].isoformat(),
+                        "system.access.audit",
+                        "obs.bronze.system_access_audit",
+                        "event_time",
+                        latest_timestamp[0]["event_time"].isoformat(),
                         "SUCCESS",
                         None,
                         record_count,
                         0
                     )
-                    logger.info(f"Updated watermark for audit log: {latest_timestamp[0]['timestamp']}")
+                    logger.info(f"Updated watermark for audit log: {latest_timestamp[0]['event_time']}")
             
             logger.info(f"Audit log ingested successfully - {record_count} records")
             return True

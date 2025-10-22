@@ -202,7 +202,7 @@ class ComputeIngestion:
                     col("warehouse_id").alias("warehouse_id"),
                     col("workspace_id").alias("workspace_id"),
                     col("warehouse_name").alias("name"),
-                    col("owned_by").alias("owner"),
+                    lit(None).cast("string").alias("owner"),
                     col("warehouse_type").alias("warehouse_type"),
                     col("warehouse_size").alias("warehouse_size"),
                     col("warehouse_channel").alias("warehouse_channel"),
@@ -210,7 +210,7 @@ class ComputeIngestion:
                     col("max_clusters").alias("max_clusters"),
                     col("auto_stop_minutes").alias("auto_stop_minutes"),
                     col("tags").alias("tags"),
-                    col("create_time").alias("create_time"),
+                    lit(None).cast("timestamp").alias("create_time"),
                     col("delete_time").alias("delete_time"),
                     col("change_time").alias("change_time")
                 ).alias("raw_data"),
@@ -225,7 +225,7 @@ class ComputeIngestion:
                         col("warehouse_id"),
                         col("workspace_id"),
                         col("warehouse_name"),
-                        col("owned_by"),
+                        lit("").alias("owner"),
                         col("warehouse_type"),
                         col("warehouse_size"),
                         col("warehouse_channel"),
@@ -450,7 +450,7 @@ class ComputeIngestion:
                     col("event_type").alias("event_type"),
                     col("event_time").alias("event_time"),
                     col("cluster_count").alias("cluster_count"),
-                    col("details").alias("details")
+                    lit(None).cast("string").alias("details")
                 ).alias("raw_data"),
                 # Bronze layer columns
                 col("workspace_id"),
