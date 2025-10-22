@@ -268,23 +268,24 @@ class ComputeIngestion:
         """Ingest compute node types from system table to bronze."""
         try:
             logger.info("Ingesting compute node types...")
+            print("🔄 DEBUG: Starting compute node types ingestion...")
             
-            # Get watermark for delta processing
-            watermark = self.watermark_manager.get_watermark(
-                "system.compute.node_types",
-                "obs.bronze.system_compute_node_types", 
-                "cloud"
-            )
+            # Read from system table (no watermark needed for reference table)
+            try:
+                node_types_source = self.spark.table("system.compute.node_types")
+                print(f"🔄 DEBUG: Read from system.compute.node_types, checking record count...")
+                source_count = node_types_source.count()
+                print(f"🔄 DEBUG: Source table has {source_count} records")
+            except Exception as e:
+                logger.warning(f"System table system.compute.node_types not accessible: {str(e)}")
+                print(f"❌ DEBUG: System table system.compute.node_types not accessible: {str(e)}")
+                logger.info("Skipping compute node types ingestion - system table not available")
+                return True
             
-            if watermark is None:
-                watermark = "1900-01-01"
-                logger.info(f"No watermark found, processing from {watermark}")
-            else:
-                logger.info(f"Processing delta from watermark: {watermark}")
-            
-            # Read from system table with watermark filter
-            node_types_source = self.spark.table("system.compute.node_types") \
-                .filter(col("cloud") > watermark)
+            if source_count == 0:
+                print("ℹ️ DEBUG: No records to process")
+                logger.info("No compute node types records to process")
+                return True
             
             # Transform to bronze format with raw_data structure matching exact bronze schema
             node_types_bronze = node_types_source.select(
@@ -294,20 +295,19 @@ class ComputeIngestion:
                     col("core_count").alias("core_count"),
                     col("memory_mb").alias("memory_mb"),
                     col("gpu_count").alias("gpu_count"),
-                    col("cloud").alias("cloud"),
-                    col("region").alias("region"),
-                    col("availability_zones").alias("availability_zones")
+                    lit(None).cast("string").alias("cloud"),  # cloud doesn't exist
+                    lit(None).cast("string").alias("region"),  # region doesn't exist
+                    lit(None).cast("array<string>").alias("availability_zones")  # availability_zones doesn't exist
                 ).alias("raw_data"),
-                # Bronze layer columns
-                col("cloud"),
+                # Bronze layer columns (no partitioning)
                 current_timestamp().alias("ingestion_timestamp"),
                 lit("system.compute.node_types").alias("source_file"),
                 # Generate record hash using available columns
                 sha2(
                     concat_ws("|",
                         col("node_type"),
-                        col("cloud"),
-                        col("region"),
+                        lit("").alias("cloud"),  # Use empty string for missing cloud
+                        lit("").alias("region"),  # Use empty string for missing region
                         col("core_count").cast("string"),
                         col("memory_mb").cast("string"),
                         col("gpu_count").cast("string")
@@ -316,27 +316,16 @@ class ComputeIngestion:
                 lit(False).alias("is_deleted")
             )
             
+            print("🔄 DEBUG: Writing to bronze table...")
             # Write to bronze table with mergeSchema option
             node_types_bronze.write.mode("append").option("mergeSchema", "true").saveAsTable(f"{self.catalog}.bronze.system_compute_node_types")
             
-            # Update watermark if data was processed
+            # No watermark needed for reference table
             record_count = node_types_bronze.count()
-            if record_count > 0:
-                latest_timestamp = node_types_bronze.select("cloud").orderBy(col("cloud").desc()).limit(1).collect()
-                if latest_timestamp:
-                    self.watermark_manager.update_watermark(
-                        "system.compute.node_types",
-                        "obs.bronze.system_compute_node_types",
-                        "cloud",
-                        latest_timestamp[0]["cloud"],
-                        "SUCCESS",
-                        None,
-                        record_count,
-                        0
-                    )
-                    logger.info(f"Updated watermark for compute node types: {latest_timestamp[0]['cloud']}")
+            print(f"🔄 DEBUG: Written {record_count} records to bronze table")
             
             logger.info(f"Compute node types ingested successfully - {record_count} records")
+            print(f"✅ DEBUG: Compute node types ingested successfully - {record_count} records")
             return True
             
         except Exception as e:

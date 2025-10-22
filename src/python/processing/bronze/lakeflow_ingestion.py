@@ -100,14 +100,14 @@ class LakeflowIngestion:
                 struct(
                     col("job_id").alias("job_id"),
                     col("workspace_id").alias("workspace_id"),
-                    col("name").alias("name"),
-                    col("description").alias("description"),
+                    col("name").alias("job_name"),
                     col("creator_id").alias("creator_id"),
-                    col("run_as").alias("run_as"),
-                    # job_parameters doesn't exist in system table, use null map
-                    lit(None).cast("map<string,string>").alias("job_parameters"),
+                    col("description").alias("description"),
+                    lit(None).cast("string").alias("job_type"),
+                    lit(None).cast("string").alias("schedule"),
+                    lit(None).cast("int").alias("timeout_seconds"),
+                    lit(None).cast("int").alias("max_concurrent_runs"),
                     col("tags").alias("tags"),
-                    # create_time doesn't exist in system table, use null
                     lit(None).cast("timestamp").alias("create_time"),
                     col("delete_time").alias("delete_time"),
                     col("change_time").alias("change_time")
@@ -120,13 +120,15 @@ class LakeflowIngestion:
                 # Generate record hash using available columns
                 sha2(
                     concat_ws("|",
-                        col("workspace_id"),
                         col("job_id"),
+                        col("workspace_id"),
                         col("name"),
-                        col("description"),
                         col("creator_id"),
-                        col("run_as"),
-                        lit("").alias("job_parameters"),  # Use empty string for missing job_parameters
+                        col("description"),
+                        lit("").alias("job_type"),
+                        lit("").alias("schedule"),
+                        lit("").alias("timeout_seconds"),
+                        lit("").alias("max_concurrent_runs"),
                         col("tags").cast("string")
                     ), 256
                 ).alias("record_hash"),

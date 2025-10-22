@@ -9,7 +9,7 @@ Date: December 2024
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, current_timestamp, lit, sha2, concat_ws, struct
+from pyspark.sql.functions import col, current_timestamp, lit, sha2, concat_ws, struct, coalesce
 import logging
 
 logger = logging.getLogger(__name__)
@@ -183,8 +183,8 @@ class BillingIngestion:
                     col("sku_name").alias("sku_name"),
                     col("cloud").alias("cloud"),
                     col("region").alias("region"),
-                    col("unit_price").alias("unit_price"),
-                    col("currency").alias("currency"),
+                    coalesce(col("pricing.default"), lit(0.0)).cast("decimal(18,6)").alias("list_price"),
+                    col("currency_code").alias("currency_code"),
                     col("effective_date").alias("effective_date"),
                     col("expiration_date").alias("expiration_date"),
                     col("pricing_tier").alias("pricing_tier"),

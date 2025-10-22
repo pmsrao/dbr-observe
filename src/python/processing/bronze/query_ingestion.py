@@ -96,7 +96,7 @@ class QueryIngestion:
                     col("duration_ms").alias("duration_ms"),
                     col("query_text").alias("query_text"),
                     col("query_type").alias("query_type"),
-                    col("query_parameters").alias("query_parameters"),
+                    col("query_parameters").cast("string").alias("query_parameters"),
                     col("error_message").alias("error_message"),
                     col("error_details").alias("error_details"),
                     col("spark_version").alias("spark_version"),
