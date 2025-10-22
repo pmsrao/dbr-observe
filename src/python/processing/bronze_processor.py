@@ -492,7 +492,7 @@ class BronzeProcessor:
             watermark = self.watermark_manager.get_watermark(
                 "system.compute.node_types",
                 "obs.bronze.system_compute_node_types", 
-                "change_time"
+                "node_type"
             )
             
             if watermark is None:
@@ -504,7 +504,7 @@ class BronzeProcessor:
             # Read from system table with watermark filter
             try:
                 node_types_source = self.spark.table("system.compute.node_types") \
-                    .filter(col("change_time") > watermark)
+                    .filter(col("node_type") > watermark)
             except Exception as e:
                 logger.warning(f"System table system.compute.node_types not accessible: {str(e)}")
                 logger.info("Skipping compute node types ingestion - system table not available")
@@ -521,7 +521,6 @@ class BronzeProcessor:
                     lit(None).cast("string").alias("region"),  # region doesn't exist
                     lit(None).cast("array<string>").alias("availability_zones")  # availability_zones doesn't exist
                 ).alias("raw_data"),
-                col("node_type"),
                 current_timestamp().alias("ingestion_timestamp"),
                 lit("system.compute.node_types").alias("source_file"),
                 sha2(
@@ -543,14 +542,14 @@ class BronzeProcessor:
             # Update watermark
             record_count = node_types_bronze.count()
             if record_count > 0:
-                latest_timestamp = node_types_bronze.select("change_time").orderBy(col("change_time").desc()).limit(1).collect()
-                if latest_timestamp:
-                    # Convert timestamp to string for watermark
-                    watermark_value = str(latest_timestamp[0]["change_time"])
+                latest_node_type = node_types_bronze.select("node_type").orderBy(col("node_type").desc()).limit(1).collect()
+                if latest_node_type:
+                    # Convert node_type to string for watermark
+                    watermark_value = str(latest_node_type[0]["node_type"])
                     self.watermark_manager.update_watermark(
                         "system.compute.node_types",
                         "obs.bronze.system_compute_node_types",
-                        "change_time",
+                        "node_type",
                         watermark_value,
                         "SUCCESS",
                         None,
@@ -875,7 +874,7 @@ class BronzeProcessor:
                     col("sku_name").alias("sku_name"),
                     col("cloud").alias("cloud"),
                     col("price_start_time").alias("effective_date"),
-                    col("pricing").alias("list_price"),
+                    col("pricing").cast("string").alias("list_price"),
                     col("currency_code").alias("currency_code"),
                     col("usage_unit").alias("usage_unit")
                 ).alias("raw_data"),
