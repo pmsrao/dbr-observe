@@ -117,8 +117,7 @@ CREATE TABLE IF NOT EXISTS obs.bronze.system_compute_node_types (
     record_hash STRING,
     is_deleted BOOLEAN
 )
-USING DELTA
-PARTITIONED BY (cloud);
+USING DELTA;
 
 -- =============================================================================
 -- 4. COMPUTE NODE TIMELINE TABLE
